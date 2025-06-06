@@ -1,0 +1,52 @@
+@use '../../styles/variables' as vars;
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 71px;
+    height: 36px;
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: vars.$input-bg-color;
+    border: 1px solid vars.$color-border;
+    border-radius: 50px;
+    transition: 0.4s;
+    transition-property: transform;
+    &:before {
+        position: absolute;
+        content: "";
+        height: 25px;
+        width: 25px;
+        border-radius: 50%;
+        left: 4px;
+        bottom: 4px;
+        border: 1px solid vars.$color-border;
+        background-color: vars.$color-toggle-inactive;
+        transition: 0.4s;
+    }
+}
+input:checked + .slider:before {
+    transform: translateX(calc(100% - -8px));
+    background-color: vars.$color-toggle-active;
+}
+@media (max-width: 450px) {
+    .switch {
+        width: 60px;
+        height: 35px;
+        &:before {
+            height: 20px;
+            width: 20px;
+        }
+    }
+}

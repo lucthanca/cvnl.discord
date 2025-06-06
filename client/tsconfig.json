@@ -1,0 +1,45 @@
+//{
+//  "compilerOptions": {
+//    "target": "ES2022",
+//    "module": "ESNext",
+//    "moduleResolution": "Node",
+//    "outDir": "./dist",
+//    "rootDir": "./src",
+//    "strict": true,
+//    "esModuleInterop": true,
+//    "skipLibCheck": true,
+//    "types": ["chrome"]
+//  },
+//  "include": ["src/**/*", "env.d.ts"],
+//  "exclude": ["node_modules", "dist"]
+//}
+
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "types": ["vite/client", "node", "chrome", "react"],
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["src/*"],
+      "@public/*": ["src/public/*"],
+    }
+  },
+  "include": [
+    "src/**/*",
+    "utils",
+    "env.d.ts"
+  ],
+}

@@ -1,0 +1,124 @@
+@use '../../styles/variables' as vars;
+@use 'sass:color';
+@import url("https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
+body, html {
+    font-size: 16px;
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    color: vars.$color-primary-text;
+}
+
+#app {
+    display: flex;
+    justify-content: center;
+    background-color: vars.$color-secondary-bg;
+    transition: background-color 0.4s ease-in-out;
+    width: 451px
+}
+
+.main-container {
+    position: relative;
+    background-color: vars.$color-primary-bg;
+    width: 100%;
+    max-width: 464px;
+    height: auto;
+    border-radius: 24px;
+    margin: 1rem;
+    transition: background-color 0.4s ease-in-out;
+    box-shadow: 0 0 20px vars.$color-shadow;
+}
+.settings-heading {
+    display: flex;
+    align-items: flex-end;
+    img {
+        width: 40px;
+        height: 40px;
+    }
+    h2 {
+        transform: translateX(-1.5rem);
+    }
+}
+.block-1 {
+    padding: 10% 7%;
+    position: relative;
+}
+
+h2 {
+    font-family: "Merriweather", sans-serif;
+    font-weight: bold;
+    color: vars.$color-primary-text;
+    font-size: 22px;
+}
+
+h2:first-of-type {
+    font-size: 32px;
+}
+.focusable:focus-visible {
+    outline-offset: 3px;
+    outline: 2px dashed vars.$color-outline;
+}
+.form-control {
+    &__root {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0.5rem 0;
+        label {
+            cursor: pointer;
+            user-select: none;
+            font-size: 1.125rem;
+            font-family: "Poppins", sans-serif;
+            color: vars.$color-primary-text;
+            font-weight: 500;
+        }
+    }
+    &__control {
+        min-width: 10rem;
+        line-height: 1.25;
+        cursor: pointer;
+        background: vars.$input-bg-color;
+        color: vars.$color-primary-text;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 2px color.adjust(vars.$input-bg-color, $lightness: -5%) solid;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        transition: 0.3s;
+        transition-property: background-color;
+        gap: 0.5rem;
+        &.text-input {
+            cursor: text;
+            font-size: 1rem;
+        }
+    }
+}
+/* Additional Styles for Responsiveness */
+@media (max-width: 450px) {
+    .main-container {
+        padding-bottom: 50px;
+        margin: 20px;
+    }
+
+    .block-1 {
+        padding: 8% 5%;
+    }
+
+    h2:first-of-type {
+        font-size: 28px;
+    }
+    .form-control {
+        &__root {
+            label {
+                font-size: 16px;
+                margin-top: 10px;
+                margin-bottom: 16px;
+            }
+        }
+    }
+}

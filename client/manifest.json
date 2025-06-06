@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "CVNL Discord Extension",
+  "version": "1.0.0",
+  "description": "CVNL Discord integration extension",
+  "permissions": [
+    "storage",
+    "identity",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://discord.com/*",
+    "https://discordapp.com/*",
+    "http://localhost:3001/*"
+  ],
+  "oauth2": {
+    "client_id": "1380138485293256808",
+    "scopes": ["identify"]
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "CVNL Discord Manager"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://cvnl.app/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

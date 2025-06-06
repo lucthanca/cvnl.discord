@@ -1,0 +1,59 @@
+{
+  "name": "CVNL Discord Extension",
+  "description": "CVNL Discord integration extension",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "icons": {
+    "16": "assets/ico/logo.png",
+    "48": "assets/ico/logo.png"
+  },
+  "action": {
+    "default_icon": {
+        "19": "assets/ico/logo.png",
+        "38": "assets/ico/logo.png"
+    },
+    "default_title": "CVNL Discord Manager",
+    "default_popup": "src/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://cvnl.app/*"
+      ],
+      "js": [
+        "src/cvnl.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "matches":["https://hello.hanu.edu.vn/*"],
+      "resources": [
+        "assets/css/*",
+        "assets/images/*"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "src/service_worker.ts",
+    "persistent": true
+  },
+  "permissions": [
+    "storage",
+    "identity",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://discord.com/*",
+    "https://discordapp.com/*",
+    "http://localhost:3000/*",
+    "http://localhost:3001/*"
+  ],
+  "oauth2": {
+    "client_id": "1380138485293256808",
+    "scopes": ["identify"]
+  },
+  "content_security_policy": {
+    "extension_page": "script-src 'self' 'unsafe-eval'; object-src 'self'"
+  }
+}

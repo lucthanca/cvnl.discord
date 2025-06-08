@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { DiscordOAuthService } from '../services/discord-oauth.js';
+import cvnlApiService from '../services/api.js';
+import dbService from "../services/database.js";
 
 const router = Router();
 const discordOAuth = new DiscordOAuthService();
@@ -111,7 +113,6 @@ router.get('/tokens/:discordUserId', async (req: Request, res: Response) => {
     }
 
     // Get all tokens for this Discord user
-    const dbService = req.app.locals.dbService;
     const userTokens = await dbService.getUsersByDiscordId(discordUserId);
 
     const tokensResponse = userTokens.map((user: any) => ({
@@ -146,28 +147,16 @@ router.post('/tokens', async (req: Request, res: Response) => {
     }
 
     // Verify token with CVNL API
-    const apiService = req.app.locals.apiService;
-    const userInfo = await apiService.authenticateUser(token);
+    const userInfo = await cvnlApiService.authenticateUser(token);
     
     if (!userInfo) {
       return res.status(400).json({ error: 'Token CVNL không hợp lệ hoặc đã hết hạn' });
     }
 
-    const dbService = req.app.locals.dbService;
-    
-    // First, check if this CVNL user is already added for this Discord user
-    const existingUsers = await dbService.getUsersByDiscordId(discordUserId);
-    console.log('Existing users for Discord ID:', discordUserId, existingUsers);
-    
-    const existingUser = existingUsers.find((user: any) => user.cvnlUserId === userInfo.id);
-    console.log('Current user exists check:', {
-      currentUserId: userInfo.id,
-      currentUserName: userInfo.name,
-      existingUser: existingUser ? {
-        id: existingUser.cvnlUserId,
-        name: existingUser.cvnlUserName
-      } : null
-    });
+    const existingUser = await dbService.getUser(discordUserId, userInfo.id);
+    if (!existingUser) {
+      console.log(`User chưa có trong hệ thống => Tạo mới...`);
+    }
 
     // Check if THIS SPECIFIC CVNL user has a Discord channel
     let channelInfo = null;
@@ -176,7 +165,7 @@ router.post('/tokens', async (req: Request, res: Response) => {
 
     try {
       // Check for channel specific to this CVNL user (this will auto-cleanup if channel is deleted)
-      const channelService = req.app.locals.channelService;
+      const channelService = req.app.locals.bot.getChannelService();
       let existingChannel = null;
       
       if (channelService) {
@@ -207,11 +196,10 @@ router.post('/tokens', async (req: Request, res: Response) => {
     if (shouldCreateChannel) {
       try {
         // Get bot client and channel service from app locals
-        const botHandler = req.app.locals.botHandler;
-        const channelService = req.app.locals.channelService;
+        const channelService = req.app.locals.bot.getChannelService();
         
-        if (botHandler && channelService) {
-          const client = botHandler.getClient();
+        if (req.app.locals.bot && channelService) {
+          const client = req.app.locals.bot.getClient();
           const guild = client.guilds.cache.first(); // Get first guild the bot is in
           
           if (guild) {

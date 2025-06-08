@@ -1,10 +1,11 @@
 import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { DatabaseService } from '../../services/database.js';
+import dbService from '../../services/database.js';
 import { WebSocketService } from '../../services/websocket.js';
+import { CommandHandler, DiscordBot } from "../bot";
 
-export class StartChatCommandHandler {
+export class StartChatCommandHandler implements CommandHandler {
   constructor(
-    private dbService: DatabaseService,
+    private bot: DiscordBot,
     private wsService: WebSocketService | null = null
   ) {}
 
@@ -12,7 +13,7 @@ export class StartChatCommandHandler {
     this.wsService = wsService;
   }
 
-  async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  async handle(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -104,11 +105,11 @@ export class StartChatCommandHandler {
   private async getChannelUser(discordUserId: string, channelId: string): Promise<any> {
     try {
       // Get all user tokens for this Discord user
-      const userTokens = await this.dbService.getUsersByDiscordId(discordUserId);
+      const userTokens = await dbService.getUsersByDiscordId(discordUserId);
       
       // Find the user whose channel matches this channelId
       for (const user of userTokens) {
-        const channelInfo = await this.dbService.getUserChannelByCvnlUser(discordUserId, user.cvnlUserId);
+        const channelInfo = await dbService.getUserChannelByCvnlUser(discordUserId, user.cvnlUserId);
         if (channelInfo && channelInfo.channelId === channelId) {
           return user;
         }

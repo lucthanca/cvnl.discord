@@ -1,16 +1,14 @@
 import { ChatInputCommandInteraction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ModalSubmitInteraction, MessageFlags } from 'discord.js';
-import { DatabaseService, UserData } from '../../services/database.js';
-import { CVNLApiService } from '../../services/api.js';
-import { ChannelService } from '../../services/channel.js';
+import dbService, { UserData } from '../../services/database.js';
+import cvnlApiService from '../../services/api.js';
+import { CommandHandler, DiscordBot } from "../bot";
 
-export class LoginCommandHandler {
+export class LoginCommandHandler implements CommandHandler {
   constructor(
-    private dbService: DatabaseService,
-    private apiService: CVNLApiService,
-    private channelService: ChannelService
+    private bot: DiscordBot
   ) {}
 
-  async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  async handle(interaction: ChatInputCommandInteraction): Promise<void> {
     const modal = new ModalBuilder()
       .setCustomId('loginModal')
       .setTitle('Đăng nhập CVNL');
@@ -39,7 +37,7 @@ export class LoginCommandHandler {
         flags: MessageFlags.Ephemeral 
       });
 
-      const userInfo = await this.apiService.authenticateUser(token);
+      const userInfo = await cvnlApiService.authenticateUser(token);
       
       if (!userInfo) {
         await interaction.editReply('Token không hợp lệ.');
@@ -49,7 +47,7 @@ export class LoginCommandHandler {
       console.log('User info received:', userInfo);
 
       // Check if this CVNL user is already added for this Discord user
-      const existingUsers = await this.dbService.getUsersByDiscordId(discordId);
+      const existingUsers = await dbService.getUsersByDiscordId(discordId);
       const existingUser = existingUsers.find((user: UserData) => user.cvnlUserId === userInfo.id);
 
       if (existingUser) {
@@ -58,7 +56,7 @@ export class LoginCommandHandler {
       }
 
       // Save to database
-      await this.dbService.saveUser({
+      await dbService.saveUser({
         discordId,
         token,
         cvnlUserId: userInfo.id,
@@ -73,7 +71,7 @@ export class LoginCommandHandler {
       if (existingUsers.length === 0) {
         const guild = interaction.guild;
         if (guild) {
-          const channel = await this.channelService.createUserChannel(
+          const channel = await this.bot.getChannelService().createUserChannel(
             guild,
             discordId,
             userInfo.name,

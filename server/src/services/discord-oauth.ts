@@ -23,12 +23,7 @@ export class DiscordOAuthService {
   private isConfigured: boolean;
 
   constructor() {
-    console.log('Initializing Discord OAuth Service...');
-    console.log('Available env vars:', {
-      DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
-      DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET ? '***SET***' : 'NOT SET',
-      DISCORD_REDIRECT_URI: process.env.DISCORD_REDIRECT_URI
-    });
+    console.log('✅ Initializing Discord OAuth Service...');
 
     this.clientId = process.env.DISCORD_CLIENT_ID || '1380138485293256808';
     this.clientSecret = process.env.DISCORD_CLIENT_SECRET || '';

@@ -1,12 +1,10 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { createServer } from 'http';
-import { DatabaseService } from './database.js';
-import { CVNLApiService } from './api.js';
-import { ChannelService } from './channel.js';
 import { CVNLEventHandlers } from '../handlers/cvnlEventHandlers.js';
 import { AuthHandler } from '../handlers/authHandler.js';
-// import { ChatHandler } from '../handlers/chatHandler.js';
 import { ConnectionHandler } from '../handlers/connectionHandler.js';
+import { DiscordBot } from "../handlers/bot";
+// import { ChatHandler } from '../handlers/chatHandler.js';
 
 interface SocketData {
   socketId: string;
@@ -19,6 +17,7 @@ interface SocketData {
 
 export interface AuthMessage {
   token: string;
+  discordUserId: string;
 }
 
 export interface NewChatMessage {
@@ -57,9 +56,6 @@ export interface EndChatMessage {
 export class WebSocketService {
   private io: SocketIOServer;
   private httpServer: ReturnType<typeof createServer>;
-  private dbService: DatabaseService;
-  private apiService: CVNLApiService;
-  private channelService: ChannelService;
   private authenticatedClients: Map<string, AuthenticatedClient> = new Map();
   private port: number;
 
@@ -69,37 +65,23 @@ export class WebSocketService {
   private cvnlEventHandlers: CVNLEventHandlers;
 
   private authHandler: AuthHandler;
-  // private chatHandler: ChatHandler;
   private connectionHandler: ConnectionHandler;
 
   private activeChatUsers: Map<string, string> = new Map(); // cvnlUserId -> chatId
 
-  constructor(
-    dbService: DatabaseService,
-    apiService: CVNLApiService,
-    channelService: ChannelService
-  ) {
-    this.dbService = dbService;
-    this.apiService = apiService;
-    this.channelService = channelService;
+  constructor(bot: DiscordBot) {
+    console.log('Initializing WebSocketService...');
     this.port = parseInt(process.env.WS_PORT || '3001');
     
     // Initialize handlers with activeChatUsers map
-    this.cvnlEventHandlers = new CVNLEventHandlers(dbService, channelService, this.activeChatUsers);
+    this.cvnlEventHandlers = new CVNLEventHandlers(bot.getChannelService(), this.activeChatUsers);
     this.authHandler = new AuthHandler(
-      dbService, 
-      apiService, 
+      bot,
       this.authenticatedClients, 
       this.cvnlUserToDiscord, 
       this.discordUserSockets,
-      this.activeChatUsers,
-      this.handleUserAuthenticated.bind(this)
+      this.activeChatUsers
     );
-    // this.chatHandler = new ChatHandler(
-    //   dbService,
-    //   channelService,
-    //   this.authenticatedClients
-    // );
     this.connectionHandler = new ConnectionHandler(
       this.authenticatedClients, 
       this.cvnlUserToDiscord, 
@@ -124,16 +106,14 @@ export class WebSocketService {
 
   private setupSocketServer(): void {
     this.io.on('connection', (socket: Socket) => {
-      console.log('New socket.io connection:', socket.id, 'from:', socket.handshake.address);
-      
+      // Setup all event handlers
+      this.setupSocketEventHandlers(socket);
+
       // Send welcome message
       socket.emit('connected', {
         message: 'Socket.IO connected. Please authenticate.',
         socketId: socket.id
       });
-
-      // Setup all event handlers
-      this.setupSocketEventHandlers(socket);
     });
 
     // Start the server
@@ -143,8 +123,10 @@ export class WebSocketService {
   }
 
   private setupSocketEventHandlers(socket: Socket): void {
+    console.log(`>>>>>>>Setting up event handlers for socket: ${socket.id}`);
     // Authentication
     socket.on('auth', async (data: AuthMessage) => {
+      console.log('🔐 Auth event received:', data);
       await this.authHandler.handleAuth(socket, data);
     });
 
@@ -268,52 +250,6 @@ export class WebSocketService {
 
   isUserConnected(cvnlUserId: string): boolean {
     return this.getClientByCvnlUserId(cvnlUserId) !== undefined;
-  }
-
-  // Public method to handle user authentication - called from AuthHandler
-  public async handleUserAuthenticated(client: AuthenticatedClient): Promise<void> {
-    try {
-      // Check for active chat immediately after authentication
-      const activeChatInfo = await this.apiService.getUserActiveChatInfo(client.token);
-      
-      if (activeChatInfo && activeChatInfo.chatId) {
-        console.log(`User ${client.cvnlUserName} (${client.cvnlUserId}) has active chat: ${activeChatInfo.chatId}`);
-        
-        // Set active chat for this user
-        client.activeChatId = activeChatInfo.chatId;
-        this.activeChatUsers.set(client.cvnlUserId, activeChatInfo.chatId);
-        
-        // Ensure thread exists
-        await this.channelService.ensureChatThread(client.discordId, activeChatInfo.chatId, client.cvnlUserId);
-      }
-    } catch (error) {
-      console.error(`Error checking active chat for user ${client.cvnlUserName}:`, error);
-    }
-  }
-
-  // Add method to restore chat states for authenticated users
-  public async restoreChatStates(): Promise<void> {
-    console.log('🔄 Restoring chat states for authenticated users...');
-    
-    for (const [key, client] of this.authenticatedClients.entries()) {
-      try {
-        // Get user's active chat from CVNL API
-        const activeChatInfo = await this.apiService.getUserActiveChatInfo(client.token);
-        
-        if (activeChatInfo && activeChatInfo.chatId) {
-          console.log(`Restored active chat ${activeChatInfo.chatId} for user ${client.cvnlUserName}`);
-          
-          // Set active chat for this user
-          client.activeChatId = activeChatInfo.chatId;
-          this.activeChatUsers.set(client.cvnlUserId, activeChatInfo.chatId);
-          
-          // Verify thread exists or create it
-          await this.channelService.ensureChatThread(client.discordId, activeChatInfo.chatId, client.cvnlUserId);
-        }
-      } catch (error) {
-        console.error(`Error restoring chat state for user ${client.cvnlUserName}:`, error);
-      }
-    }
   }
 
   close(): void {

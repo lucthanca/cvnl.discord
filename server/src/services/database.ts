@@ -39,7 +39,7 @@ export interface UserChannelData {
 }
 
 export interface ChatThreadData {
-  id?: number;
+  id: number;
   chatId: string;
   threadId: string;
   discordId: string;
@@ -47,9 +47,20 @@ export interface ChatThreadData {
   threadName: string;
   cvnlUserId: string;
   createdAt?: Date;
+  status: number;
 }
 
-export class DatabaseService {
+export interface UserTokenData {
+  discordId: string;
+  cvnlUserId: string;
+  cvnlUserName: string;
+  token: string;
+  channelId: string;
+  channelName: string;
+  guildId: string;
+}
+
+class DatabaseService {
   private prisma: PrismaClient;
   private dataDir: string;
 
@@ -123,10 +134,12 @@ export class DatabaseService {
     }
   }
 
-  async getUser(discordId: string): Promise<UserData | null> {
+  async getUser(discordId: string, cvnlUserId: string): Promise<UserData | null> {
     try {
-      const user = await this.prisma.user.findFirst({
-        where: { discordId },
+      const user = await this.prisma.user.findUnique({
+        where: {
+          discordId_cvnlUserId: {discordId, cvnlUserId },
+        },
       });
       return user as UserData | null;
     } catch (error) {
@@ -240,7 +253,10 @@ export class DatabaseService {
     try {
       await this.prisma.userChannel.upsert({
         where: {
-          cvnlUserId: channelData.cvnlUserId  // Use cvnlUserId as unique key
+          discordId_cvnlUserId: {
+            discordId: channelData.discordId,
+            cvnlUserId: channelData.cvnlUserId,
+          }
         },
         update: {
           discordId: channelData.discordId,
@@ -262,7 +278,12 @@ export class DatabaseService {
       if (cvnlUserId) {
         // Get channel for specific CVNL user
         return await this.prisma.userChannel.findUnique({
-          where: { cvnlUserId, discordId },
+          where: {
+            discordId_cvnlUserId: {
+              discordId,
+              cvnlUserId,
+            }
+          },
         });
       } else {
         // Get any channel for this Discord user (backwards compatibility)
@@ -272,6 +293,20 @@ export class DatabaseService {
       }
     } catch (error) {
       console.error('Error getting user channel:', error);
+      return null;
+    }
+  }
+
+  async getUserChannelByChannelId(channelId: string) {
+    try {
+      return await this.prisma.userChannel.findUnique({
+        where: { channelId },
+        include: {
+          user: true,
+        }
+      });
+    } catch (error) {
+      console.error('Error getting user channel by channel ID:', error);
       return null;
     }
   }
@@ -294,7 +329,12 @@ export class DatabaseService {
     try {
       if (cvnlUserId) {
         await this.prisma.userChannel.delete({
-          where: { cvnlUserId },
+          where: {
+            discordId_cvnlUserId: {
+              discordId,
+              cvnlUserId,
+            }
+          },
         });
       } else {
         await this.prisma.userChannel.deleteMany({
@@ -306,30 +346,67 @@ export class DatabaseService {
     }
   }
 
+  /**
+   * Updates a chat thread with the given ID.
+   *
+   * @param id - The ID of the chat thread to update.
+   * @param threadData - The data to update the chat thread with, excluding 'id' and 'createdAt'.
+   */
+  async updateChatThread(id: number, threadData: Omit<Partial<ChatThreadData>, 'id' | 'createdAt'>): Promise<ChatThreadData> {
+    return this.prisma.chatThread.update({
+      where: {id},
+      data: threadData,
+    });
+  }
+
   // Chat Thread methods
   async saveChatThread(threadData: Omit<ChatThreadData, 'id' | 'createdAt'>): Promise<void> {
     try {
-      await this.prisma.chatThread.upsert({
-        where: { chatId: threadData.chatId, cvnlUserId: threadData.cvnlUserId, id: undefined },
-        update: {
-          threadId: threadData.threadId,
-          channelId: threadData.channelId,
-          threadName: threadData.threadName,
+      // First, try to find existing thread
+      const existingThread = await this.prisma.chatThread.findFirst({
+        where: {
+          chatId: threadData.chatId,
+          cvnlUserId: threadData.cvnlUserId,
         },
-        create: threadData,
       });
+
+      if (existingThread) {
+        // Update existing thread
+        await this.prisma.chatThread.update({
+          where: { id: existingThread.id },
+          data: {
+            threadId: threadData.threadId,
+            channelId: threadData.channelId,
+            threadName: threadData.threadName,
+            discordId: threadData.discordId,
+          },
+        });
+        console.log(`Updated chat thread for chat ${threadData.chatId}`);
+      } else {
+        console.log(`No existing thread found for chat ${threadData.chatId}, creating new one`, threadData);
+        // Create new thread
+        await this.prisma.chatThread.create({
+          data: threadData,
+        });
+        console.log(`Created new chat thread for chat ${threadData.chatId}`);
+      }
     } catch (error) {
       console.error('Error saving chat thread:', error);
-      throw new Error('Failed to save chat thread');
+      throw new Error('Failed to save chat thread: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 
+  /**
+   * Retrieves a chat thread by chatId and cvnlUserId.
+   *
+   * @param chatId
+   * @param cvnlUserId
+   */
   async getChatThread(chatId: string, cvnlUserId: string): Promise<ChatThreadData | null> {
     try {
-      return await this.prisma.chatThread.findFirst({
+      return await this.prisma.chatThread.findUnique({
         where: {
-          chatId,
-          cvnlUserId,
+          chatId_cvnlUserId: { chatId, cvnlUserId },
         },
       });
     } catch (error) {
@@ -348,16 +425,6 @@ export class DatabaseService {
       return [];
     }
   }
-
-  // async deleteChatThread(chatId: string, cvnlUserId: string): Promise<void> {
-  //   try {
-  //     await this.prisma.chatThread.delete({
-  //       where: { chatId, cvnlUserId },
-  //     });
-  //   } catch (error) {
-  //     console.error('Error deleting chat thread:', error);
-  //   }
-  // }
 
   async deleteChatThreadById(threadId?: number): Promise<void> {
     if (!threadId) return;
@@ -380,7 +447,48 @@ export class DatabaseService {
     }
   }
 
+  async getUserTokens(discordId: string): Promise<UserTokenData[]> {
+    try {
+      const users = await this.prisma.user.findMany({
+        where: { discordId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const result: UserTokenData[] = [];
+      
+      for (const user of users) {
+        const channel = await this.prisma.userChannel.findFirst({
+          where: { cvnlUserId: user.cvnlUserId },
+        });
+        
+        if (channel) {
+          result.push({
+            discordId: user.discordId,
+            cvnlUserId: user.cvnlUserId,
+            cvnlUserName: user.cvnlUserName,
+            token: user.token,
+            channelId: channel.channelId,
+            channelName: channel.channelName,
+            guildId: channel.guildId,
+          });
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error getting user tokens:', error);
+      return [];
+    }
+  }
+
+  public getResource(): PrismaClient {
+    return this.prisma;
+  }
+
   async close(): Promise<void> {
     await this.prisma.$disconnect();
   }
 }
+
+const dbService = new DatabaseService();
+export default dbService;

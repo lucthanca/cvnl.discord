@@ -1,64 +1,68 @@
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../data/cvnl_discord.db"
+    provider = "sqlite"
+    url      = "file:../data/cvnl_discord.db"
 }
 
 model User {
-  id             Int          @id @default(autoincrement())
-  discordId      String
-  token          String
-  cvnlUserId     String
-  cvnlUserName   String
-  cvnlUserGender String?
-  cvnlUserJob    Int?
-  cvnlUserAge    Int?
-  createdAt      DateTime     @default(now())
-  chatThreads    ChatThread[]
+    id             Int          @id @default(autoincrement())
+    discordId      String
+    token          String
+    cvnlUserId     String
+    cvnlUserName   String
+    cvnlUserGender String?
+    cvnlUserJob    Int?
+    cvnlUserAge    Int?
+    createdAt      DateTime     @default(now())
+    chatThreads    ChatThread[]
+    UserChannel    UserChannel?
 
-  @@unique([discordId, cvnlUserId])
-  @@map("users")
+    @@unique([discordId, cvnlUserId])
+    @@map("users")
 }
 
 model OAuthSession {
-  id           Int      @id @default(autoincrement())
-  discordId    String   @unique
-  accessToken  String
-  refreshToken String
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+    id           Int      @id @default(autoincrement())
+    discordId    String   @unique
+    accessToken  String
+    refreshToken String
+    expiresAt    DateTime
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
 
-  @@map("oauth_sessions")
+    @@map("oauth_sessions")
 }
 
 model UserChannel {
-  id          Int      @id @default(autoincrement())
-  discordId   String
-  cvnlUserId  String   @unique // Add this field to link channel to specific CVNL user
-  channelId   String   @unique
-  channelName String
-  guildId     String
-  createdAt   DateTime @default(now())
+    id          Int      @id @default(autoincrement())
+    discordId   String
+    cvnlUserId  String
+    channelId   String   @unique
+    channelName String
+    guildId     String
+    createdAt   DateTime @default(now())
 
-  @@unique([discordId, cvnlUserId]) // Composite unique key
-  @@map("user_channels")
+    user User @relation(fields: [discordId, cvnlUserId], references: [discordId, cvnlUserId])
+
+    @@unique([discordId, cvnlUserId]) // Composite unique key
+    @@map("user_channels")
 }
 
 model ChatThread {
-  id         Int      @id @default(autoincrement())
-  chatId     String   @unique
-  threadId   String
-  discordId  String
-  channelId  String
-  threadName String
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [discordId, cvnlUserId], references: [discordId, cvnlUserId])
-  cvnlUserId String   @unique
+    id         Int      @id @default(autoincrement())
+    status     Int      @default(0) // 0: active, 1: closed
+    chatId     String
+    threadId   String
+    discordId  String
+    channelId  String
+    threadName String
+    createdAt  DateTime @default(now())
+    user       User     @relation(fields: [discordId, cvnlUserId], references: [discordId, cvnlUserId])
+    cvnlUserId String
 
-  @@unique([chatId, cvnlUserId])
-  @@map("chat_threads")
+    @@unique([chatId, cvnlUserId])
+    @@map("chat_threads")
 }

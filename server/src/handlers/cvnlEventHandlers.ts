@@ -1,10 +1,9 @@
 import { AuthenticatedClient } from '../services/websocket.js';
-import { DatabaseService } from '../services/database.js';
 import { ChannelService } from '../services/channel.js';
+import dbService from "../services/database.js";
 
 export class CVNLEventHandlers {
   constructor(
-    private dbService: DatabaseService,
     private channelService: ChannelService,
     private activeChatUsers?: Map<string, string> // cvnlUserId -> chatId
   ) {}
@@ -76,7 +75,7 @@ export class CVNLEventHandlers {
 
   private async archivePreviousChat(client: AuthenticatedClient, previousChatId: string): Promise<void> {
     try {
-      const chatThread = await this.dbService.getChatThread(previousChatId, client.cvnlUserId);
+      const chatThread = await dbService.getChatThread(previousChatId, client.cvnlUserId);
       if (!chatThread) {
         console.log(`No thread found for previous chat ${previousChatId}`);
         return;
@@ -101,7 +100,7 @@ export class CVNLEventHandlers {
       }
 
       // Clean up database
-      await this.dbService.deleteChatThreadById(chatThread.id);
+      await dbService.deleteChatThreadById(chatThread.id);
     } catch (error) {
       console.error('Error archiving previous chat:', error);
     }
@@ -124,7 +123,7 @@ export class CVNLEventHandlers {
       console.log(`Processing C2 (new message) for chat ${chatId}`);
 
       // Find thread for this chat
-      const chatThread = await this.dbService.getChatThread(chatId, client.cvnlUserId);
+      const chatThread = await dbService.getChatThread(chatId, client.cvnlUserId);
       if (!chatThread) {
         console.log(`No thread found for chat ${chatId}, skipping message`);
         return;
@@ -135,7 +134,7 @@ export class CVNLEventHandlers {
       if (!thread || !thread.isThread()) {
         console.log(`Thread ${chatThread.threadId} no longer exists`);
         // Clean up database
-        await this.dbService.deleteChatThreadById(chatThread.id);
+        await dbService.deleteChatThreadById(chatThread.id);
         return;
       }
 
@@ -181,8 +180,14 @@ export class CVNLEventHandlers {
       client.activeChatId = undefined;
       this.activeChatUsers?.delete(client.cvnlUserId);
 
+      // log current active chats
+
+      console.log(`Current active chats after C5:`, Array.from(this.activeChatUsers?.entries() || []).map(([cvnlUserId, chatId]) => ({
+        cvnlUserId,
+        chatId
+      })));
       // Find and archive thread
-      const chatThread = await this.dbService.getChatThread(chatId, client.cvnlUserId);
+      const chatThread = await dbService.getChatThread(chatId, client.cvnlUserId);
       if (chatThread) {
         const thread = await this.channelService.getChannelById(chatThread.threadId);
         if (thread && thread.isThread()) {
@@ -201,7 +206,7 @@ export class CVNLEventHandlers {
         }
 
         // Clean up database
-        await this.dbService.deleteChatThreadById(chatThread.id);
+        await dbService.deleteChatThreadById(chatThread.id);
       }
 
       console.log(`✅ Ended chat ${chatId} for user ${client.cvnlUserName}`);

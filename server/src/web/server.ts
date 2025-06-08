@@ -1,19 +1,16 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { DiscordOAuthService } from '../services/oauth.js';
-import { DatabaseService } from '../services/database.js';
 
 export class WebServer {
   private app: express.Application;
   private oauthService: DiscordOAuthService;
-  private dbService: DatabaseService;
-  private port: number;
-  private host: string;
+  private readonly port: number;
+  private readonly host: string;
 
   constructor() {
     this.app = express();
     this.oauthService = new DiscordOAuthService();
-    this.dbService = new DatabaseService();
     this.port = parseInt(process.env.WEB_PORT || '3000');
     this.host = process.env.WEB_HOST || 'localhost';
 

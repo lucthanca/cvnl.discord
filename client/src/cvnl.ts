@@ -1,4 +1,5 @@
 import * as io from 'socket.io-client';
+import { EVENT_DISCORD_START_CHAT, EVENT_DISCORD_END_CHAT, EVENT_CVNL_CHAT_EVENT } from '../../server/src/shared/constants';
 
 interface TokenData {
   id: string;
@@ -49,20 +50,16 @@ class CVNLManager {
       // Create socket connections for each token
       this.createSocketConnections();
       
-      // Create Discord server connections for each CVNL user
-      this.createDiscordServerConnections();
-      
     } catch (error) {
       console.error('Failed to initialize CVNL Manager:', error);
     }
   }
 
-  private createDiscordServerConnections(): void {
-    if (!this.discordUser) return;
-
-    console.log('Creating Discord server connections for each CVNL user...');
+  private createSocketConnections(): void {
+    console.log(`Creating socket connections for ${this.tokens.length} tokens...`);
 
     this.tokens.forEach((tokenData) => {
+      this.createSocketConnection(tokenData);
       this.createDiscordServerConnection(tokenData);
     });
   }
@@ -85,12 +82,6 @@ class CVNLManager {
 
     socket.on('connect', () => {
       console.log(`[Discord-${tokenData.userName}] Connected to Discord server:`, socket.id);
-      
-      // Authenticate immediately after connection
-      console.log(`[Discord-${tokenData.userName}] Sending auth with token...`);
-      socket.emit('auth', {
-        token: tokenData.token
-      });
     });
 
     socket.on('auth_success', (data: any) => {
@@ -108,6 +99,15 @@ class CVNLManager {
 
     socket.on('connected', (data: any) => {
       console.log(`[Discord-${tokenData.userName}] Received connected event:`, data);
+
+      // Authenticate immediately after connection
+      console.log(`[Discord-${tokenData.userName}] Sending auth with token...`);
+      socket.emit('auth', {
+        token: tokenData.token,
+        discordUserId: this.discordUser?.id,
+        authRequestId: Math.random().toString(36).substring(2),
+        from: 'connect_cvnl',
+      });
     });
 
     socket.on('connect_error', (error: any) => {
@@ -134,7 +134,10 @@ class CVNLManager {
       console.log(`[Discord-${tokenData.userName}] Reconnected after ${attemptNumber} attempts`);
       // Re-authenticate after reconnection
       socket.emit('auth', {
-        token: tokenData.token
+        token: tokenData.token,
+        discordUserId: this.discordUser?.id,
+        authRequestId: Math.random().toString(36).substring(2),
+        from: 're-connect_cvnl',
       });
     });
 
@@ -150,12 +153,12 @@ class CVNLManager {
       console.error(`[Discord-${tokenData.userName}] Failed to reconnect after all attempts`);
     });
 
-    socket.on('start_chat_from_discord', (data: any) => {
+    socket.on(EVENT_DISCORD_START_CHAT, (data: any) => {
       console.log(`[Discord-${tokenData.userName}] Received start chat command:`, data);
       this.handleStartChatFromDiscord(data, tokenData);
     });
 
-    socket.on('chat_ended_from_discord', (data: any) => {
+    socket.on(EVENT_DISCORD_END_CHAT, (data: any) => {
       console.log(`[Discord-${tokenData.userName}] Received end chat command:`, data);
       this.handleEndChatFromDiscord(data, tokenData);
     });
@@ -163,27 +166,31 @@ class CVNLManager {
 
   private handleStartChatFromDiscord(data: any, tokenData: TokenData): void {
     console.log(`[Discord Command] Start chat for user: ${tokenData.userName} (${tokenData.userId})`);
-    
+
+    // Notify Discord server about the action
+    const discordSocket = this.discordSockets.get(tokenData.userId);
+    if (!discordSocket) {
+      console.error(`Không tìm thấy socket Discord cho người dùng: ${tokenData.userId}`);
+      return;
+    }
     // Find the corresponding CVNL socket
     const cvnlSocket = this.sockets.get(tokenData.userId);
     if (!cvnlSocket) {
       console.error(`No CVNL socket found for user: ${tokenData.userId}`);
+      discordSocket.emit(`${EVENT_DISCORD_START_CHAT}_RESPONSE`, {
+        status: 'error',
+        message: `Không tìm thấy kết nối CVNL cho người dùng ${tokenData.userName}. Vui lòng đảm bảo client CVNL đang chạy và đã đăng nhập.`
+      });
       return;
     }
 
     // Emit start chat event to CVNL using the send function
     console.log(`[${tokenData.userName}] Starting chat via Discord command...`);
     this.sendToCVNL(cvnlSocket, 'c1', { action: 'start_chat' });
-    
-    // Notify Discord server about the action
-    const discordSocket = this.discordSockets.get(tokenData.userId);
+
     if (discordSocket) {
-      discordSocket.emit('cvnl_action_result', {
-        discordUserId: data.discordUserId,
-        channelId: data.channelId,
-        cvnlUserId: tokenData.userId,
-        action: 'start_chat',
-        status: 'initiated',
+      discordSocket.emit(`${EVENT_DISCORD_START_CHAT}_RESPONSE`, {
+        status: 'success',
         message: `Đã gửi lệnh tìm kiếm chat cho ${tokenData.userName}`
       });
     }
@@ -194,14 +201,27 @@ class CVNLManager {
     
     // Find the corresponding CVNL socket
     const cvnlSocket = this.sockets.get(tokenData.userId);
+    const discordSocket = this.discordSockets.get(tokenData.userId);
+    if (!discordSocket) {
+      console.error(`Không tìm thấy socket Discord cho người dùng: ${tokenData.userId}`);
+      return;
+    }
     if (!cvnlSocket) {
       console.error(`No CVNL socket found for user: ${tokenData.userId}`);
+      discordSocket.emit(`${EVENT_DISCORD_END_CHAT}_RESPONSE`, {
+        status: 'error',
+        message: `Không tìm thấy kết nối CVNL cho người dùng ${tokenData.userName}. Vui lòng đảm bảo client CVNL đang chạy và đã đăng nhập.`
+      });
       return;
     }
 
     // Emit end chat event to CVNL using the send function
     console.log(`[${tokenData.userName}] Ending chat via Discord command...`);
-    this.sendToCVNL(cvnlSocket, 'c5', { chatId: data.chatId, reason: 'ended_by_discord' });
+    // this.sendToCVNL(cvnlSocket, 'c5', { chatId: data.chatId, reason: 'ended_by_discord' });
+    discordSocket.emit(`${EVENT_DISCORD_END_CHAT}_RESPONSE`, {
+      status: 'success',
+      message: `Đã gửi lệnh kết thúc chat cho ${tokenData.userName}`
+    });
   }
 
   // Add the send function for CVNL communication
@@ -227,7 +247,7 @@ class CVNLManager {
     try {
       // Try chrome.storage first (for extension context)
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        const result = await chrome.storage.local.get(['discordUser']);
+        const result = await chrome.storage.local.get<{ discordUser: DiscordUser }>(['discordUser']);
         if (result.discordUser) {
           this.discordUser = result.discordUser;
           console.log('CVNLManager: Loaded Discord user from chrome storage:', this.discordUser.username);
@@ -238,7 +258,7 @@ class CVNLManager {
       // Fallback to localStorage (for web context)
       const stored = localStorage.getItem('discordUser');
       if (stored) {
-        this.discordUser = JSON.parse(stored);
+        this.discordUser = JSON.parse(stored) as DiscordUser;
         console.log('CVNLManager: Loaded Discord user from localStorage:', this.discordUser.username);
       }
     } catch (error) {
@@ -265,14 +285,6 @@ class CVNLManager {
     }
   }
 
-  createSocketConnections(): void {
-    console.log(`Creating socket connections for ${this.tokens.length} tokens...`);
-
-    this.tokens.forEach((tokenData) => {
-      this.createSocketConnection(tokenData);
-    });
-  }
-
   createSocketConnection(tokenData: TokenData): void {
     const CLIENT_ID = 'web-v1.13.0';
     const socketUrl = 'https://rc.cvnl.app';
@@ -293,15 +305,6 @@ class CVNLManager {
     // Socket event handlers with user identification
     socket.on('connect', () => {
       console.log(`[${tokenData.userName}] Connected to CVNL server`);
-      
-      // Authenticate with Discord server WebSocket for this user
-      const discordSocket = this.discordSockets.get(tokenData.userId);
-      if (discordSocket && discordSocket.connected) {
-        console.log(`[${tokenData.userName}] Authenticating with Discord server...`);
-        discordSocket.emit('auth', {
-          token: tokenData.token
-        });
-      }
     });
 
     socket.on('disconnect', () => {
@@ -335,91 +338,36 @@ class CVNLManager {
       console.log(`[${tokenData.userName}] Received c1 event (chat started):`, data);
       
       // Forward to Discord server with chat ID for thread creation
-      const discordSocket = this.discordSockets.get(tokenData.userId);
-      if (discordSocket) {
-        discordSocket.emit('cvnl_chat_event', {
-          cvnlUserId: tokenData.userId,
-          userName: tokenData.userName,
-          event: 'c1',
-          data: data
-        });
-      }
+      this.fireCVNLEventToDiscord(
+        tokenData.userId,
+        'c1',
+        data,
+        `Người lạ đã tham gia cuộc trò chuyện!`
+      );
     });
 
     socket.on('c2', (data: any) => {
       console.log(`[${tokenData.userName}] [New Message] Received c2 event:`, data);
-      
-      // Forward to Discord server for message display
-      const discordSocket = this.discordSockets.get(tokenData.userId);
-      if (discordSocket) {
-        discordSocket.emit('cvnl_chat_event', {
-          cvnlUserId: tokenData.userId,
-          userName: tokenData.userName,
-          event: 'c2',
-          data: data
-        });
-      }
+      this.fireCVNLEventToDiscord(tokenData.userId, 'c2', data);
     });
 
     socket.on('c3', (data: any) => {
       console.log(`[${tokenData.userName}] Received c3 event:`, data);
       
       // Notify Discord about chat started
-      if (this.discordUser) {
-        this.discordSockets.get(tokenData.userId)?.emit('cvnl_chat_event', {
-          discordUserId: this.discordUser.id,
-          cvnlUserId: tokenData.userId,
-          userName: tokenData.userName,
-          event: 'c3',
-          data: data
-        });
-      }
+      this.fireCVNLEventToDiscord(tokenData.userId, 'c3', data);
     });
 
     socket.on('c5', (data: any) => {
       console.log(`[${tokenData.userName}] [End chat] Received c5 event:`, data);
       
       // Notify Discord about chat ended
-      if (this.discordUser) {
-        this.discordSockets.get(tokenData.userId)?.emit('cvnl_chat_event', {
-          discordUserId: this.discordUser.id,
-          cvnlUserId: tokenData.userId,
-          userName: tokenData.userName,
-          event: 'c5',
-          data: data
-        });
-      }
+      this.fireCVNLEventToDiscord(tokenData.userId, 'c5', data);
     });
 
     socket.on('c17', (data: any) => {
-      console.log(`🔍 C17 CLIENT DEBUG - Received c17 event:`, {
-        data: data,
-        tokenUserId: tokenData.userId,
-        tokenUserName: tokenData.userName,
-        discordUserId: this.discordUser?.id,
-        socketId: socket.id
-      });
-      
       // Forward queue order to Discord server
-      const discordSocket = this.discordSockets.get(tokenData.userId);
-      if (discordSocket) {
-        const eventData = {
-          cvnlUserId: tokenData.userId,
-          userName: tokenData.userName,
-          event: 'c17',
-          data: data
-        };
-        
-        console.log(`🚀 Forwarding C17 to Discord server:`, {
-          eventData,
-          discordSocketId: discordSocket.id,
-          targetUserId: tokenData.userId
-        });
-        
-        discordSocket.emit('cvnl_chat_event', eventData);
-      } else {
-        console.error(`❌ No Discord socket found for user ${tokenData.userId} (${tokenData.userName})`);
-      }
+      this.fireCVNLEventToDiscord(tokenData.userId, 'c17', data, 'Hàng đợi cập nhật!');
     });
 
     socket.on('c12', (data: any) => {
@@ -461,6 +409,20 @@ class CVNLManager {
     socket.on('c25', (data: any) => {
       console.log(`[${tokenData.userName}] Received c25 event:`, data);
     });
+  }
+
+  private fireCVNLEventToDiscord(userId: string, event: string, data: any, desc?: string): void {
+    // Forward to Discord server with chat ID for thread creation
+    const discordSocket = this.discordSockets.get(userId);
+    if (!discordSocket) {
+      console.log(`☄️ Không tìm thấy socket Discord cho người dùng: ${userId}`);
+      return;
+    }
+    discordSocket.emit(EVENT_CVNL_CHAT_EVENT, {
+      event,
+      data,
+      description: desc,
+    })
   }
 
   watchForAuthChanges(): void {

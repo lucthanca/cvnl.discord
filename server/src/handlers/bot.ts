@@ -1,27 +1,34 @@
-import { Client, Events, GatewayIntentBits, SlashCommandBuilder, ChatInputCommandInteraction, ModalSubmitInteraction, MessageFlags, Message, REST, Routes, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
-import { DatabaseService, ChatThreadData } from '../services/database.js';
-import { CVNLApiService } from '../services/api.js';
+import { Client, GatewayIntentBits, SlashCommandBuilder, ChatInputCommandInteraction, ModalSubmitInteraction, MessageFlags, Message, REST, Routes, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction } from 'discord.js';
+import dbService , { ChatThreadData, UserTokenData } from '../services/database.js';
 import { ChannelService } from '../services/channel.js';
 import { WebSocketService } from '../services/websocket.js';
 import { LoginCommandHandler } from './commands/login.js';
-import { LogoutCommandHandler } from './commands/logout.js';
+// import { LogoutCommandHandler } from './commands/logout.js';
 import { ChatInfoCommandHandler } from './commands/chatinfo.js';
 import { StartChatCommandHandler } from './commands/startchat.js';
 
-export class DiscordBotHandler {
-  private client: Client;
-  private dbService: DatabaseService;
-  private channelService: ChannelService;
+export interface CommandHandler {
+  handle(interaction: ChatInputCommandInteraction): Promise<void>;
+}
+
+export class DiscordBot {
+  private readonly client: Client;
+  private readonly channelService: ChannelService;
   private wsService: WebSocketService | null = null;
   private rest: REST;
 
-  // Command handlers
-  private loginHandler: LoginCommandHandler;
-  private logoutHandler: LogoutCommandHandler;
-  private chatInfoHandler: ChatInfoCommandHandler;
-  private startChatHandler: StartChatCommandHandler;
+  private commandHandlers: Map<string, CommandHandler>;
+  private modalHandlers: Map<string, (interaction: ModalSubmitInteraction) => Promise<void>>;
+  private selectMenuHandlers: Map<string, (interaction: StringSelectMenuInteraction) => Promise<void>>;
+
+  private readonly startChatHandler: StartChatCommandHandler;
+  private readonly token: string;
 
   constructor() {
+    if (!process.env.DISCORD_TOKEN) {
+      throw new Error('DISCORD_TOKEN environment variable is required');
+    }
+    this.token = process.env.DISCORD_TOKEN;
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
@@ -32,16 +39,25 @@ export class DiscordBotHandler {
     });
 
     // Initialize services
-    const apiService = new CVNLApiService();
-    this.dbService = new DatabaseService();
-    this.channelService = new ChannelService(this.client, this.dbService);
+    this.channelService = new ChannelService();
     this.rest = new REST();
-
-    // Initialize command handlers
-    this.loginHandler = new LoginCommandHandler(this.dbService, apiService, this.channelService);
-    this.logoutHandler = new LogoutCommandHandler(this.dbService);
-    this.chatInfoHandler = new ChatInfoCommandHandler(this.dbService);
-    this.startChatHandler = new StartChatCommandHandler(this.dbService);
+    const loginHandler = new LoginCommandHandler(this);
+    this.startChatHandler = new StartChatCommandHandler(this);
+    this.commandHandlers = new Map<string, CommandHandler>([
+      ['login', loginHandler],
+      // ['logout', new LogoutCommandHandler(this)],
+      ['chatinfo', new ChatInfoCommandHandler(this)],
+      ['startchat', this.startChatHandler],
+      ['channel', { handle: this.handleChannelCommand.bind(this) }],
+      ['endchat', { handle: this.handleEndChatCommand.bind(this) }],
+    ]);
+    this.modalHandlers = new Map<string, (interaction: ModalSubmitInteraction) => Promise<void>>([
+      ['loginModal', loginHandler.handleModalSubmit.bind(loginHandler)],
+    ]);
+    
+    this.selectMenuHandlers = new Map<string, (interaction: StringSelectMenuInteraction) => Promise<void>>([
+      ['tokenSelection', this.handleTokenSelection.bind(this)],
+    ]);
 
     this.setupEventHandlers();
   }
@@ -59,38 +75,32 @@ export class DiscordBotHandler {
     });
 
     this.client.on('interactionCreate', async (interaction) => {
-      console.log('Interaction received:', interaction.type, interaction.isCommand?.() ? interaction.commandName : 'not a command');
-      
-      if (interaction.isChatInputCommand()) {
-        console.log('Slash command received:', interaction.commandName);
-        
-        switch (interaction.commandName) {
-          case 'login':
-            await this.loginHandler.handleSlashCommand(interaction);
-            break;
-          case 'logout':
-            await this.logoutHandler.handleSlashCommand(interaction);
-            break;
-          case 'chatinfo':
-            await this.chatInfoHandler.handleSlashCommand(interaction);
-            break;
-          case 'startchat':
-            await this.startChatHandler.handleSlashCommand(interaction);
-            break;
-          case 'channel':
-            await this.handleChannelCommand(interaction);
-            break;
-          case 'endchat':
-            await this.handleEndChatCommand(interaction);
-            break;
-          default:
+      try {
+        if (interaction.isChatInputCommand()) {
+          const handler = this.commandHandlers.get(interaction.commandName);
+          if (handler) {
+            console.log(`Slash command received: ${interaction.commandName}`);
+            await handler.handle(interaction);
+          } else {
             await interaction.reply({ content: 'Unknown command!', ephemeral: true });
+          }
+        } else if (interaction.isModalSubmit()) {
+          const modalHandler = this.modalHandlers.get(interaction.customId);
+          if (modalHandler) {
+            console.log(`Modal submit received: ${interaction.customId}`);
+            await modalHandler(interaction);
+          }
+        } else if (interaction.isStringSelectMenu()) {
+          const selectHandler = this.selectMenuHandlers.get(interaction.customId);
+          if (selectHandler) {
+            console.log(`Select menu interaction received: ${interaction.customId}`);
+            await selectHandler(interaction);
+          }
         }
-      } else if (interaction.isModalSubmit()) {
-        console.log('Modal submit received:', interaction.customId);
-        
-        if (interaction.customId === 'loginModal') {
-          await this.loginHandler.handleModalSubmit(interaction);
+      } catch (error) {
+        console.error('Interaction handler error:', error);
+        if (interaction.isRepliable()) {
+          await interaction.reply({ content: 'Đã xảy ra lỗi khi xử lý lệnh.', ephemeral: true });
         }
       }
     });
@@ -99,7 +109,7 @@ export class DiscordBotHandler {
       if (message.author.bot) return;
 
       if (message.channel.isThread()) {
-        console.log(`Thread message from ${message.author.tag}: ${message.content}`);
+        console.log(message.channel.id);
         return;
       }
     });
@@ -109,7 +119,7 @@ export class DiscordBotHandler {
 
     process.on('SIGINT', () => {
       console.log('Shutting down bot...');
-      this.dbService.close();
+      dbService.close();
       this.client.destroy();
       process.exit(0);
     });
@@ -168,19 +178,72 @@ export class DiscordBotHandler {
 
   private async handleChannelCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const discordId = interaction.user.id;
-
+    const channelId = interaction.channelId;
+    
     try {
-      const channel = await this.channelService.getUserChannel(discordId);
-      if (!channel) {
-        await interaction.reply({ 
-          content: 'Bạn chưa có kênh chat. Hãy đăng nhập trước.', 
-          flags: MessageFlags.Ephemeral 
+      // Get all user tokens/channels
+      const userTokens: UserTokenData[] = await dbService.getUserTokens(discordId);
+      console.log(userTokens);
+      
+      
+      if (!userTokens || userTokens.length === 0) {
+        await interaction.reply({
+          content: 'Bạn chưa có token nào được đăng ký. Hãy sử dụng lệnh /login để đăng ký token.',
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
 
+      // Check if user is in one of their private channels
+      const currentChannelToken = userTokens.find((token: UserTokenData) => token.channelId === channelId);
+      
+      if (currentChannelToken) {
+        // User is in their private channel, show channel info directly
+        // show thêm cả channel id của discord nữa
+
+        await interaction.reply({
+          content: `Kênh chat của bạn: <#${currentChannelToken.channelId}>\nCVNL User: ${currentChannelToken.cvnlUserName}\nDiscord Channel ID: ${channelId}`,
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
+      // User is not in their private channel, show token selection dropdown
+      if (userTokens.length === 1) {
+        // Only one token, show info directly
+        const token = userTokens[0];
+        const channel = await this.channelService.getChannelById(token.channelId);
+        if (channel) {
+          await interaction.reply({
+            content: `Kênh chat của bạn: <#${token.channelId}>\nCVNL User: ${token.cvnlUserName}`,
+            flags: MessageFlags.Ephemeral
+          });
+        } else {
+          await interaction.reply({
+            content: 'Không thể tìm thấy kênh chat. Hãy thử đăng nhập lại.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+        return;
+      }
+
+      // Multiple tokens, show dropdown selection
+      const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('tokenSelection')
+        .setPlaceholder('Chọn tài khoản CVNL để xem thông tin kênh')
+        .addOptions(
+          userTokens.map((token: UserTokenData) => ({
+            label: token.cvnlUserName,
+            value: token.cvnlUserId,
+            description: `Token: ${token.token.substring(0, 10)}...`
+          }))
+        );
+
+      const actionRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+
       await interaction.reply({
-        content: `Kênh chat của bạn: <#${channel.id}>`,
+        content: 'Chọn tài khoản CVNL để xem thông tin kênh:',
+        components: [actionRow],
         flags: MessageFlags.Ephemeral
       });
 
@@ -189,6 +252,44 @@ export class DiscordBotHandler {
       await interaction.reply({ 
         content: 'Có lỗi xảy ra khi lấy thông tin kênh.', 
         flags: MessageFlags.Ephemeral 
+      });
+    }
+  }
+
+  private async handleTokenSelection(interaction: StringSelectMenuInteraction): Promise<void> {
+    const selectedUserId = interaction.values[0];
+    const discordId = interaction.user.id;
+
+    try {
+      const userTokens: UserTokenData[] = await dbService.getUserTokens(discordId);
+      const selectedToken = userTokens.find((token: UserTokenData) => token.cvnlUserId === selectedUserId);
+
+      if (!selectedToken) {
+        await interaction.reply({
+          content: 'Không tìm thấy token được chọn.',
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
+      const channel = await this.channelService.getChannelById(selectedToken.channelId);
+      if (channel) {
+        await interaction.reply({
+          content: `Kênh chat của **${selectedToken.cvnlUserName}**: <#${selectedToken.channelId}>`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else {
+        await interaction.reply({
+          content: `Token của **${selectedToken.cvnlUserName}** hợp lệ nhưng không tìm thấy kênh chat. Hãy thử đăng nhập lại.`,
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+    } catch (error) {
+      console.error('Token selection error:', error);
+      await interaction.reply({
+        content: 'Có lỗi xảy ra khi xử lý lựa chọn token.',
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -207,7 +308,7 @@ export class DiscordBotHandler {
         });
         return;
       }
-      const allChatThreads = await this.dbService.getAllChatThreads();
+      const allChatThreads = await dbService.getAllChatThreads();
       const chatThread = allChatThreads.find((ct: ChatThreadData) =>
         ct.discordId === discordId
       );
@@ -221,7 +322,7 @@ export class DiscordBotHandler {
       }
 
       // Delete thread and chat data
-      await this.dbService.deleteChatThreadById(chatThread.id);
+      await dbService.deleteChatThreadById(chatThread.id);
 
       try {
         const thread = await this.channelService.getChannelById(chatThread.threadId);
@@ -234,24 +335,24 @@ export class DiscordBotHandler {
       }
 
       // Notify the web client
-      const user = await this.dbService.getUser(discordId);
-      if (user && this.wsService) {
-        const sent = this.wsService.sendToUser(user.cvnlUserId, 'chat_ended_from_discord', {
-          chatId: chatThread.chatId,
-          reason: 'ended_by_user'
-        });
-
-        if (!sent) {
-          console.log('User not connected to websocket, chat ended silently');
-        }
-      }
-
-      await interaction.reply({ 
-        content: 'Đã kết thúc cuộc trò chuyện.', 
-        flags: MessageFlags.Ephemeral 
-      });
-
-      console.log(`Chat ${chatThread.chatId} ended by user ${user?.cvnlUserName} via Discord command`);
+      // const user = await dbService.getUser(discordId, );
+      // if (user && this.wsService) {
+      //   const sent = this.wsService.sendToUser(user.cvnlUserId, 'chat_ended_from_discord', {
+      //     chatId: chatThread.chatId,
+      //     reason: 'ended_by_user'
+      //   });
+      //
+      //   if (!sent) {
+      //     console.log('User not connected to websocket, chat ended silently');
+      //   }
+      // }
+      //
+      // await interaction.reply({
+      //   content: 'Đã kết thúc cuộc trò chuyện.',
+      //   flags: MessageFlags.Ephemeral
+      // });
+      //
+      // console.log(`Chat ${chatThread.chatId} ended by user ${user?.cvnlUserName} via Discord command`);
 
     } catch (error) {
       console.error('End chat command error:', error);
@@ -262,16 +363,28 @@ export class DiscordBotHandler {
     }
   }
 
-  async start(token: string): Promise<void> {
+  async start(): Promise<void> {
     try {
-      await this.client.login(token);
+      await this.client.login(this.token);
     } catch (error) {
       console.error('Failed to start bot:', error);
       throw error;
     }
   }
 
+  /**
+   * Get the Discord client instance.
+   * @returns {Client} The Discord client.
+   * @throws {Error} If the client is not initialized.
+   */
   getClient(): Client {
+    if (!this.client) {
+      throw new Error('Discord client is not initialized');
+    }
     return this.client;
+  }
+
+  getChannelService(): ChannelService {
+    return this.channelService;
   }
 }

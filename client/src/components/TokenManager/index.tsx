@@ -1,6 +1,5 @@
 import React from "react";
 import Textbox from "../Textbox";
-import * as io from "socket.io-client";
 import {
   authenticateWithDiscord,
   DiscordUser,
@@ -8,6 +7,8 @@ import {
   loadDiscordUser,
   removeDiscordUser,
 } from "../../services/auth";
+import TokenList from "./components/TokenList";
+import WebSocketTester from "./components/WebSocketTester";
 
 interface Token {
   id: string;
@@ -24,20 +25,17 @@ const TokenManager: React.FC = () => {
   const [tokens, setTokens] = React.useState<Token[]>([]);
   const [isAddingToken, setIsAddingToken] = React.useState<boolean>(false);
   const [newToken, setNewToken] = React.useState<string>("");
-  const [socket, setSocket] = React.useState<SocketIOClient.Socket | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [isInitialLoading, setIsInitialLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
     mainBlockRef.current?.focus();
-    // Check if user is already logged in with Discord
     initializeAuth();
   }, []);
 
   const initializeAuth = async () => {
     setIsInitialLoading(true);
     try {
-      // Load Discord user from shared storage
       const storedUser = await loadDiscordUser();
       if (storedUser) {
         setDiscordUser(storedUser);
@@ -119,11 +117,7 @@ const TokenManager: React.FC = () => {
     try {
       const user = await authenticateWithDiscord();
       setDiscordUser(user);
-      
-      // Save user to shared storage
       await saveDiscordUser(user);
-      
-      // Load tokens for this user
       await loadSavedTokens(user.id);
     } catch (error) {
       console.error('Login failed:', error);
@@ -135,9 +129,7 @@ const TokenManager: React.FC = () => {
 
   const logout = async () => {
     try {
-      // Remove user from shared storage
       await removeDiscordUser();
-
       setDiscordUser(null);
       setTokens([]);
       setIsAddingToken(false);
@@ -155,59 +147,42 @@ const TokenManager: React.FC = () => {
 
     setIsLoading(true);
     try {
-      console.log("Adding token for user:", discordUser.id);
-      console.log("Token:", newToken.trim().substring(0, 10) + "...");
-
       const result = await saveTokenToServer(discordUser.id, newToken.trim());
-      console.log("Server response:", result);
 
       if (result && result.success && result.tokenData) {
-        // Reload tokens from server
         await loadSavedTokens(discordUser.id);
-
         setNewToken("");
         setIsAddingToken(false);
 
         let successMessage = `✅ ${result.tokenData.message || 'Thêm tài khoản thành công!'}\n👤 ${result.tokenData.userName}`;
 
-        // Show channel info if it was created
         if (result.tokenData.channelInfo) {
           successMessage += `\n\n🆕 Đã tạo kênh Discord: ${result.tokenData.channelInfo.channelName}`;
         }
 
         alert(successMessage);
       } else if (result && result.error) {
-        // Show friendly error message
         let errorMessage = result.error || "Có lỗi xảy ra";
 
         if (errorMessage.includes("không hợp lệ")) {
-          errorMessage =
-            "❌ Token không hợp lệ\n\nVui lòng kiểm tra lại token CVNL của bạn.";
+          errorMessage = "❌ Token không hợp lệ\n\nVui lòng kiểm tra lại token CVNL của bạn.";
         } else if (errorMessage.includes("đã được thêm")) {
           errorMessage = "⚠️ Tài khoản đã tồn tại\n\n" + errorMessage;
         } else if (errorMessage.includes("kết nối")) {
-          errorMessage =
-            "🌐 Lỗi kết nối\n\nKhông thể kết nối đến server. Vui lòng thử lại sau.";
+          errorMessage = "🌐 Lỗi kết nối\n\nKhông thể kết nối đến server. Vui lòng thử lại sau.";
         }
 
         alert(errorMessage);
       } else {
-        console.error("Unexpected response format:", result);
-        alert(
-          "💥 Server trả về format không đúng\n\nVui lòng kiểm tra server logs."
-        );
+        alert("💥 Server trả về format không đúng\n\nVui lòng kiểm tra server logs.");
       }
     } catch (error) {
       console.error("Add token error:", error);
 
       if (error instanceof TypeError && error.message.includes("fetch")) {
-        alert(
-          "🌐 Không thể kết nối đến server\n\nVui lòng kiểm tra:\n- Server có đang chạy?\n- Cổng 3000 có bị block?"
-        );
+        alert("🌐 Không thể kết nối đến server\n\nVui lòng kiểm tra:\n- Server có đang chạy?\n- Cổng 3000 có bị block?");
       } else {
-        alert(
-          "💥 Có lỗi không xác định xảy ra\n\nChi tiết lỗi: " + error.message
-        );
+        alert("💥 Có lỗi không xác định xảy ra\n\nChi tiết lỗi: " + error.message);
       }
     } finally {
       setIsLoading(false);
@@ -220,7 +195,6 @@ const TokenManager: React.FC = () => {
     if (confirm("Bạn có chắc chắn muốn xóa token này?")) {
       const success = await deleteTokenFromServer(discordUser.id, tokenId);
       if (success) {
-        // Reload tokens from server
         await loadSavedTokens(discordUser.id);
       } else {
         alert("Có lỗi xảy ra khi xóa token");
@@ -506,84 +480,11 @@ const TokenManager: React.FC = () => {
             overflowY: "auto",
           }}
         >
-          {tokens.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "40px 20px",
-                color: "#666",
-                border: "2px dashed #ddd",
-                borderRadius: "8px",
-              }}
-            >
-              <p>Chưa có token nào được thêm</p>
-              <p style={{ fontSize: "12px" }}>
-                Sử dụng lệnh /login trong Discord hoặc click "Thêm Token" để bắt đầu
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {tokens.map((token) => (
-                <div
-                  key={token.id}
-                  style={{
-                    padding: "12px",
-                    border: "1px solid #ddd",
-                    borderRadius: "6px",
-                    backgroundColor: "white",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    fontSize: "13px",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: "bold", marginBottom: "5px" }}>
-                      {token.userName}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#666", marginBottom: "5px" }}>
-                      User ID: {token.userId}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      Thêm lúc: {new Date(token.addedAt).toLocaleString("vi-VN")}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                        backgroundColor:
-                          token.status === "connected" ? "#d4edda" : "#f8d7da",
-                        color:
-                          token.status === "connected" ? "#155724" : "#721c24",
-                      }}
-                    >
-                      {token.status === "connected"
-                        ? "🟢 Connected"
-                        : "🔴 Disconnected"}
-                    </span>
-                    <button
-                      onClick={() => removeToken(token.id)}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontSize: "12px",
-                      }}
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <TokenList tokens={tokens} onRemoveToken={removeToken} />
         </div>
+
+        {/* WebSocket Tester */}
+        <WebSocketTester tokens={tokens} />
       </div>
     </div>
   );

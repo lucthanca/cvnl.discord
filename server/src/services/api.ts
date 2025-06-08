@@ -11,6 +11,47 @@ export interface CVNLUserInfo {
   linkAccountIsRequired: boolean;
 }
 
+export type ChatInfoStatus = 'ok' | 'error';
+export type ChatDataStatus = 'chatting' | 'empty' | 'stranger_closed';
+export type CVNLChatMessage = {
+  id: string;
+  content: string;
+  from: 'stranger' | 'me';
+  status: 'delivered' | 'sent';
+  createdAt: string;
+};
+export type CVNLChatData = {
+  chat: {
+    status: ChatDataStatus;
+    id: string;
+    createdAt: string;
+    messages: CVNLChatMessage[],
+    metadata: {
+      liked: boolean;
+      beLiked: boolean;
+      didBlock: boolean;
+      didRate: boolean;
+      didReport: boolean;
+    },
+    stranger: {
+      "gender": string;
+      "job": number;
+    }
+  }
+}
+export interface ChatInfoResponse {
+  data: CVNLChatData,
+  status: ChatInfoStatus;
+  error_message?: string;
+}
+export type CVNLChatInfo = {
+  chatId: string;
+  status: ChatDataStatus;
+  partnerGender: string;
+  partnerJob: string;
+  createdAt: string;
+};
+
 export interface CVNLVerifyResponse {
   data: CVNLUserInfo;
   status: string;
@@ -34,6 +75,11 @@ export class CVNLApiService {
     });
   }
 
+  /**
+   * Verify the provided token with the CVNL API.
+   *
+   * @param token - The JWT token to verify.
+   */
   async verifyToken(token: string): Promise<CVNLUserInfo | null> {
     try {
       const response = await this.client.post('/auth/verifyToken', {
@@ -54,11 +100,21 @@ export class CVNLApiService {
     }
   }
 
+  /**
+   * Authenticate a user by verifying their token.
+   *
+   * @param token
+   */
   async authenticateUser(token: string): Promise<CVNLUserInfo | null> {
     return await this.verifyToken(token);
   }
 
-  async getUserActiveChatInfo(token: string): Promise<any> {
+  /**
+   * Get the active chat information for the user.
+   *
+   * @param token - The JWT token of the user.
+   */
+  async getUserActiveChatInfo(token: string): Promise<CVNLChatInfo | null> {
     try {
       const response = await fetch('https://rc.cvnl.app/api/chat/info', {
         method: 'GET',
@@ -73,18 +129,26 @@ export class CVNLApiService {
         return null;
       }
 
-      const data = await response.json();
+      const data = await response.json() as ChatInfoResponse;
       console.log('Chat info API response:', data);
       
       // Check if user has active conversation
-      if (data.status === 'ok' && data.data?.chat && data.data.chat.status === 'chatting') {
+      if (data.status === "ok" && data.data?.chat && data.data.chat.status === 'chatting') {
         return {
           chatId: data.data.chat.id,
           status: data.data.chat.status,
-          partnerId: data.data.chat.stranger?.id,
-          partnerName: data.data.chat.stranger?.name,
+          partnerGender: this.getGenderName(data.data.chat.stranger.gender),
+          partnerJob: this.getJobName(data.data.chat.stranger.job),
           createdAt: data.data.chat.createdAt
         };
+      } else {
+        return {
+          status: data.data.chat.status,
+          chatId: '',
+          partnerGender: '',
+          partnerJob: '',
+          createdAt: ''
+        }
       }
 
       return null;
@@ -93,4 +157,37 @@ export class CVNLApiService {
       return null;
     }
   }
+
+  /**
+   * Get Gender name based on the gender code.
+   */
+  private getGenderName(genderCode: string): string {
+    const gender = genderCode.toLowerCase();
+    const genderMap: { [key: string]: string } = {
+      'other': 'Bí mật',
+      'male': 'Nam',
+      'female': 'Nữ'
+    };
+    return genderMap[gender] || 'Không xác định';
+  }
+
+  /**
+   * Get the job name based on the job ID.
+   *
+   * @param jobId
+   * @private
+   */
+  private getJobName(jobId: number): string {
+    const jobMap: { [key: number]: string } = {
+      0: "Bí mật",
+      1: "Học sinh",
+      2: "Sinh viên",
+      3: "Người đi làm"
+      // Có thể thêm nhiều job codes khác trong tương lai
+    };
+    return jobMap[jobId] || "Không xác định";
+  }
 }
+
+const cvnlApiService = new CVNLApiService();
+export default cvnlApiService;

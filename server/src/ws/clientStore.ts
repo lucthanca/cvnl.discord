@@ -1,6 +1,6 @@
 
 import { Socket } from "socket.io";
-import { User } from "@prisma/client";
+import { User, OAuthSession } from "@prisma/client";
 import { Message } from "discord.js";
 
 export interface AuthenticatedClient {
@@ -14,6 +14,7 @@ export interface AuthenticatedClient {
 }
 
 export const clients: Map<string, AuthenticatedClient> = new Map();
+export const discordClients: Map<string, OAuthSession> = new Map();
 
 export const populateClientKey = (cvnlUserId: string, discordUserId?: string): string => {
   // for now we just use cvnlUserId first, discordUserId will be implemented later

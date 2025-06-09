@@ -20,6 +20,8 @@ model User {
     chatThreads    ChatThread[]
     UserChannel    UserChannel?
 
+    isOnline Boolean @default(false)
+
     @@unique([discordId, cvnlUserId])
     @@map("users")
 }

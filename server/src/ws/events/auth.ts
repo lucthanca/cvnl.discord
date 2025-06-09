@@ -97,6 +97,13 @@ export default async function onAuth(socket: Socket, data: AuthMessage) {
     });
     return;
   }
+  const prisma = dbService.getResource();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      isOnline: true,
+    }
+  });
 
   console.log('👤 Tìm thấy người dùng trong cơ sở dữ liệu:', {
     discordId: user.discordId,

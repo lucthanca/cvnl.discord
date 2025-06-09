@@ -1,5 +1,6 @@
 import React from "react";
 import Textbox from "../Textbox";
+import * as io from 'socket.io-client';
 import {
   authenticateWithDiscord,
   DiscordUser,
@@ -27,11 +28,34 @@ const TokenManager: React.FC = () => {
   const [newToken, setNewToken] = React.useState<string>("");
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [isInitialLoading, setIsInitialLoading] = React.useState<boolean>(true);
+  const [statusSocket, setStatusSocket] = React.useState<SocketIOClient.Socket | null>(null);
+  const [isSocketConnected, setIsSocketConnected] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     mainBlockRef.current?.focus();
     initializeAuth();
+    
+    // Cleanup socket on unmount
+    return () => {
+      if (statusSocket) {
+        statusSocket.disconnect();
+      }
+    };
   }, []);
+
+  React.useEffect(() => {
+    // Connect to status socket when user is authenticated
+    if (discordUser && !statusSocket) {
+      connectStatusSocket();
+    }
+    
+    // Disconnect socket when user logs out
+    if (!discordUser && statusSocket) {
+      statusSocket.disconnect();
+      setStatusSocket(null);
+      setIsSocketConnected(false);
+    }
+  }, [discordUser]);
 
   const initializeAuth = async () => {
     setIsInitialLoading(true);
@@ -129,6 +153,13 @@ const TokenManager: React.FC = () => {
 
   const logout = async () => {
     try {
+      // Disconnect status socket
+      if (statusSocket) {
+        statusSocket.disconnect();
+        setStatusSocket(null);
+        setIsSocketConnected(false);
+      }
+      
       await removeDiscordUser();
       setDiscordUser(null);
       setTokens([]);
@@ -200,6 +231,72 @@ const TokenManager: React.FC = () => {
         alert("Có lỗi xảy ra khi xóa token");
       }
     }
+  };
+
+  const connectStatusSocket = () => {
+    if (!discordUser) return;
+
+    try {
+      const socket: SocketIOClient.Socket = io.connect('http://localhost:3001', {
+        forceNew: true,
+        transports: ['websocket', 'polling'],
+        query: {
+          type: 'token_manager',
+          discordUserId: discordUser.id
+        }
+      });
+
+      socket.on('connect', () => {
+        console.log('Token status socket connected');
+        setIsSocketConnected(true);
+        
+        // Authenticate as token manager
+        socket.emit('auth_token_manager', {
+          discordUserId: discordUser.id
+        });
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('Token status socket disconnected:', reason);
+        setIsSocketConnected(false);
+      });
+
+      socket.on('token_status_update', (data) => {
+        console.log('Token status update received:', data);
+        handleTokenStatusUpdate(data);
+      });
+
+      socket.on('auth_success', (data) => {
+        console.log('Token manager auth success:', data);
+      });
+
+      socket.on('tk_mgr_auth_error', (error) => {
+        console.error('Token manager auth error:', error);
+      });
+
+      socket.on('error', (error) => {
+        console.error('Token status socket error:', error);
+      });
+
+      setStatusSocket(socket);
+    } catch (error) {
+      console.error('Error connecting status socket:', error);
+    }
+  };
+
+  const handleTokenStatusUpdate = (data: { 
+    userId: string; 
+    status: 'connected' | 'disconnected' | 'error';
+    userName?: string;
+    timestamp?: string;
+  }) => {
+    setTokens(prevTokens => 
+      prevTokens.map(token => 
+        token.userId === data.userId 
+          ? { ...token, status: data.status }
+          : token
+      )
+    );
   };
 
   // Loading spinner component
@@ -378,8 +475,18 @@ const TokenManager: React.FC = () => {
               <div style={{ fontWeight: "bold" }}>
                 {discordUser.username}#{discordUser.discriminator}
               </div>
-              <div style={{ fontSize: "12px", color: "#666" }}>
+              <div style={{ fontSize: "12px", color: "#666", display: "flex", alignItems: "center", gap: "5px" }}>
                 Discord User
+                <span style={{ 
+                  width: "8px", 
+                  height: "8px", 
+                  borderRadius: "50%", 
+                  backgroundColor: isSocketConnected ? "#28a745" : "#dc3545",
+                  display: "inline-block"
+                }}></span>
+                <span style={{ fontSize: "11px", color: isSocketConnected ? "#28a745" : "#dc3545" }}>
+                  {isSocketConnected ? "Real-time ON" : "Real-time OFF"}
+                </span>
               </div>
             </div>
           </div>
@@ -409,7 +516,19 @@ const TokenManager: React.FC = () => {
               marginBottom: "15px",
             }}
           >
-            <h3>Danh sách Token ({tokens.length})</h3>
+            <h3>
+              Danh sách Token ({tokens.length})
+              {isSocketConnected && (
+                <span style={{ 
+                  fontSize: "12px", 
+                  color: "#28a745", 
+                  marginLeft: "10px",
+                  fontWeight: "normal"
+                }}>
+                  🔄 Real-time status
+                </span>
+              )}
+            </h3>
             <button
               onClick={() => setIsAddingToken(!isAddingToken)}
               style={{

@@ -1,22 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, User } from '@prisma/client';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { mkdir } from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-export interface UserData {
-  id?: number;
-  discordId: string;
-  token: string;
-  cvnlUserId: string;
-  cvnlUserName: string;
-  cvnlUserGender?: string | null;
-  cvnlUserJob?: number | null;
-  cvnlUserAge?: number | null;
-  createdAt?: Date;
-}
 
 export interface OAuthSessionData {
   id?: number;
@@ -105,7 +93,7 @@ class DatabaseService {
     }
   }
 
-  async saveUser(userData: Omit<UserData, 'id' | 'createdAt'>): Promise<UserData> {
+  async saveUser(userData: Omit<User, 'id' | 'createdAt' | 'isOnline'>): Promise<User> {
     try {
       const user = await this.prisma.user.upsert({
         where: {
@@ -125,7 +113,7 @@ class DatabaseService {
       });
 
       console.log(`Saved user: ${user.cvnlUserName} for Discord: ${user.discordId}`);
-      return user as UserData;
+      return user;
     } catch (error: any) {
       console.error('Error saving user:', error);
       if (error.code === 'P2002') {
@@ -148,37 +136,34 @@ class DatabaseService {
     }
   }
 
-  async getUserByCvnlId(cvnlUserId: string): Promise<UserData | null> {
+  async getUserByCvnlId(cvnlUserId: string): Promise<User | null> {
     try {
-      const user = await this.prisma.user.findFirst({
+      return await this.prisma.user.findFirst({
         where: { cvnlUserId },
       });
-      return user as UserData | null;
     } catch (error) {
       console.error('Error getting user by CVNL ID:', error);
       return null;
     }
   }
 
-  async getUsersByDiscordId(discordId: string): Promise<UserData[]> {
+  async getUsersByDiscordId(discordId: string): Promise<User[]> {
     try {
-      const users = await this.prisma.user.findMany({
+      return await this.prisma.user.findMany({
         where: { discordId },
         orderBy: { createdAt: 'desc' },
       });
-      return users as UserData[];
     } catch (error) {
       console.error('Error getting users by Discord ID:', error);
       return [];
     }
   }
 
-  async getAllUsers(): Promise<UserData[]> {
+  async getAllUsers(): Promise<User[]> {
     try {
-      const users = await this.prisma.user.findMany({
+      return await this.prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
-      });
-      return users as UserData[];
+      }) ;
     } catch (error) {
       console.error('Error getting all users:', error);
       return [];

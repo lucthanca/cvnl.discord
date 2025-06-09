@@ -81,7 +81,7 @@ export const saveTokenToServer = async (discordUserId: string, token: string) =>
     } catch (parseError) {
       console.error('Failed to parse response JSON:', parseError);
       console.error('Parse error details:', {
-        message: parseError.message,
+        message: parseError instanceof Error ? parseError.message : String(parseError),
         responseText: responseText.substring(0, 200) + '...'
       });
       return { success: false, error: 'Invalid server response format: JSON parse failed' };

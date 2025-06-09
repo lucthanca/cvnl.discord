@@ -21,13 +21,13 @@
         "https://cvnl.app/*"
       ],
       "js": [
-        "src/cvnl.js"
+        "src/cvnl.ts"
       ]
     }
   ],
   "web_accessible_resources": [
     {
-      "matches":["https://hello.hanu.edu.vn/*"],
+      "matches":["https://cvnl.app/*"],
       "resources": [
         "assets/css/*",
         "assets/images/*"

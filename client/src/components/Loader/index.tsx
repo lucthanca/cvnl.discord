@@ -12,7 +12,7 @@ const Loader: React.FC<LoaderProps> = (props) => {
       <div className="popup" style={{ transform: show ? 'translateY(0)' : 'translateY(-100%)' }}>
         <img src="https://cdn.discordapp.com/emojis/1309088606668718120.webp?size=96&animated=true" alt="loading"/>
           <span>
-            Đang thử dùng AI để tìm câu trả lời, chờ tí...
+            Loadinggg...
           </span>
       </div>
     </div>

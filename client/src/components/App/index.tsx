@@ -1,16 +1,14 @@
 import React, { useEffect } from "react";
 import Loader from '../Loader';
-import type { OnGenerative } from '@src/utils/generative-answer';
 
 type AppProps = {
   children?: React.ReactNode;
-  onLoad: (onGenerative: OnGenerative) => Promise<void>;
 }
 
-const App: React.FC<AppProps> = ({ children, onLoad }) => {
+const App: React.FC<AppProps> = ({ children }) => {
   const [isLoading, setIsLoading] = React.useState(false);
   const execute = React.useCallback(() => {
-    onLoad((loading) => setIsLoading(loading));
+    // Simulate a loading state for the initial render
   }, []);
   useEffect(() => {
     if (document.readyState !== 'loading') {

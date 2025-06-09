@@ -1,6 +1,6 @@
 class IndexedDBHelper<T extends { id?: number | string }> {
-  private dbName: string;
-  private storeName: string;
+  private readonly dbName: string;
+  private readonly storeName: string;
   private initialized: boolean;
   private db: IDBDatabase | null = null;
 
@@ -120,6 +120,6 @@ class IndexedDBHelper<T extends { id?: number | string }> {
   }
 }
 
-const storage = new IndexedDBHelper<{ id?: number | string, name: string }>("HelloHana", "tasks");
-export const configStorage = new IndexedDBHelper<{ id?: number | string, value: string }>("HelloHana", "configs");
+const storage = new IndexedDBHelper<{ id?: number | string, name: string }>("DiscordCVNL_Integration", "tasks");
+export const configStorage = new IndexedDBHelper<{ id?: number | string, value: string }>("DiscordCVNL_Integration", "configs");
 export default storage;

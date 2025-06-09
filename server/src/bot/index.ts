@@ -73,11 +73,17 @@ class DiscordBot
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
       if (message.channel.isThread()) {
-        console.log(message.channel.id);
+        console.log(`📝 Received message in thread`, message);
         const chatThread = await channelService.getUserChatThreadByThreadId(message.channel.id);
         if (!chatThread) {
           await message.reply({
             content: 'Không tìm thấy thông tin cuộc trò chuyện cho thread này. Dữ liệu có thể đã bị xóa hoặc không hợp lệ.',
+          });
+          return;
+        }
+        if (chatThread.status !== 0) {
+          await message.reply({
+            content: 'Cuộc trò chuyện này đã kết thúc hoặc không còn hoạt động. Vui lòng bắt đầu cuộc trò chuyện mới.',
           });
           return;
         }

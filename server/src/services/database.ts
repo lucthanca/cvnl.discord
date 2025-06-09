@@ -48,6 +48,7 @@ export interface ChatThreadData {
   cvnlUserId: string;
   createdAt?: Date;
   status: number;
+  reOpenCount?: number;
 }
 
 export interface UserTokenData {

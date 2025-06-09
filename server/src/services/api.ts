@@ -177,7 +177,7 @@ export class CVNLApiService {
    * @param jobId
    * @private
    */
-  private getJobName(jobId: number): string {
+  public getJobName(jobId: number): string {
     const jobMap: { [key: number]: string } = {
       0: "Bí mật",
       1: "Học sinh",

@@ -1,6 +1,5 @@
 import { config } from 'dotenv';
 import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
 // Load .env file explicitly
 const envPath = resolve(process.cwd(), '.env');

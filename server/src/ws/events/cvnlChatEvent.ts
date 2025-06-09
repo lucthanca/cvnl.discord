@@ -13,7 +13,6 @@ const c1: EventHandler = async (client, data: any) => {
       client.activeEphemeralMessage = undefined;
     }
     const chatId = data.data.id;
-    const gender = cvnlApiService.getGenderName(data.data.gender);
 
     if (!chatId) {
       console.warn("No chat ID provided in c1 event data");
@@ -64,16 +63,22 @@ const c1: EventHandler = async (client, data: any) => {
           {
             name: '💬 Chat ID',
             value: `\`${chatId.slice(-8)}\``,
-            inline: true
+            inline: true,
           },
           {
             name: '👤 CVNL User',
             value: client.cvnlUserId,
-            inline: true
+            inline: true,
           },
           {
             name: '🧠 Giới tính',
-            value: `\`${gender}\``,
+            value: `\`${cvnlApiService.getGenderName(data.data.gender)}\``,
+            inline: true,
+          },
+          {
+            name: '💼 Đang là',
+            value: `\`${cvnlApiService.getJobName(data.data.job)}\``,
+            inline: true,
           }
         ],
       }]
@@ -286,7 +291,6 @@ export default async function onCVNLChatEvent(socket: Socket, data: any) {
   // loop through all clients to find the one with the matching socket ID
   for (const [cl, sock] of clients.entries()) {
     if (sock.socket.id === sockId) {
-      console.log(`🔌 CVNL Chat Event: ${sockId} for client ${cl}`);
       const eventType = data.event;
       if (handlers.has(eventType)) {
         try {
@@ -295,7 +299,7 @@ export default async function onCVNLChatEvent(socket: Socket, data: any) {
           console.error(`Error handling event ${eventType} for client ${cl}:`, error);
         }
       } else {
-        console.warn(`Unhandled CVNL event: ${eventType} for client ${cl}`);
+        console.warn(`Unhandled CVNL event: ${eventType} for client ${cl} with data:`, data);
       }
       break;
     }

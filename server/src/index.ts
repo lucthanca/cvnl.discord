@@ -51,9 +51,6 @@ async function main() {
     // Dynamically import WebSocket server
     const { default: WebSocketServer } = await import('~/ws/server.js');
 
-    // Make services available to routes
-    // app.locals.bot = bot;
-
     // Update health check to include connected users
     app.get('/health', (req, res) => {
       res.json({ 

@@ -4,6 +4,7 @@ import { CommandHandler } from "./index.js";
 import channelService from '~/services/channel.js';
 import { clients, populateClientKey } from '~/ws/clientStore.js';
 import cvnlApiService from "~/services/api.js";
+import { waitForEventWithTimeout } from "~/utils/emitWithTimeout.js";
 
 export const EVENT_DISCORD_START_CHAT = 'start_chat';
 export default {
@@ -71,22 +72,32 @@ export default {
       }
 
 
-      clientSocket.socket.once(`${EVENT_DISCORD_START_CHAT}_RESPONSE`, (data: { status: 'success' | 'error', message: string }) => {
-        if (data.status === 'error') {
-          console.error(`❌ Lỗi khi gửi yêu cầu bắt đầu chat: ${data.message}`);
+      try {
+        waitForEventWithTimeout<{ status: 'success' | 'error', message: string }>(clientSocket.socket, `${EVENT_DISCORD_START_CHAT}_RESPONSE`, 10000).then((data) => {
+          if (data.status === 'error') {
+            console.error(`❌ Lỗi khi gửi yêu cầu bắt đầu chat: ${data.message}`);
+            interaction.editReply({
+              content: `❌ **Lỗi khi bắt đầu chat:** ${data.message}\n\n` +
+                      `Vui lòng đảm bảo client CVNL đang chạy và đã đăng nhập.`,
+            });
+            return;
+          }
+          console.log(`✅ Đã gửi yêu cầu bắt đầu chat đến client CVNL: ${dbChannel.user.cvnlUserName}`);
           interaction.editReply({
-            content: `❌ **Lỗi khi bắt đầu chat:** ${data.message}\n\n` +
-                     `Vui lòng đảm bảo client CVNL đang chạy và đã đăng nhập.`,
+            content: `🔍 **Đang tìm kiếm người chat cho ${dbChannel.user.cvnlUserName}...**\n\n` +
+                    `Vui lòng đợi trong giây lát...`,
+          });
+        }).catch(e => {
+          console.error(`❌ Timeout waiting for ${EVENT_DISCORD_START_CHAT}_RESPONSE from client ${clientSocket.cvnlUserId}`, e);
+          interaction.editReply({
+            content: `❌ Tiến trình bắt đầu chat đã hết thời gian chờ. Có thể Client đang bị mất kết nối, check lại trình duyệt mà cài Extension CVNL nhé!`,
           });
           return;
-        }
-        console.log(`✅ Đã gửi yêu cầu bắt đầu chat đến client CVNL: ${dbChannel.user.cvnlUserName}`);
-        interaction.editReply({
-          content: `🔍 **Đang tìm kiếm người chat cho ${dbChannel.user.cvnlUserName}...**\n\n` +
-                   `Vui lòng đợi trong giây lát...`,
         });
-      });
-      clientSocket.socket.emit(EVENT_DISCORD_START_CHAT);
+        clientSocket.socket.emit(EVENT_DISCORD_START_CHAT);
+      } catch (e) {
+        console.log(`❌ Lỗi khi gửi yêu cầu bắt đầu chat: ${e}`);
+      }
     } catch (e) {
 
     }

@@ -298,6 +298,13 @@ export class ChannelService {
       return remoteThread;
     }
     const thread = await this.getChannelById(existingThread.threadId);
+
+
+    let reOpenCount = existingThread?.reOpenCount || 0;
+    if (existingThread.status === THREAD_CHAT_STATUS_ARCHIVED) {
+      reOpenCount += 1;
+    }
+
     if (!thread || !thread.isThread()) {
       const remoteThread = await this.createDiscordThread(channel, chatId) as ThreadChannelWithNewFlag;
       remoteThread.is_recreated = true; // Mark as recreated
@@ -305,13 +312,17 @@ export class ChannelService {
         threadId: remoteThread.id,
         threadName: remoteThread.name,
         status: THREAD_CHAT_STATUS_ACTIVE,
+        reOpenCount,
       });
       return remoteThread;
     }
     await thread.setArchived(false);
-    await dbService.updateChatThread(existingThread.id, {
-      status: THREAD_CHAT_STATUS_ACTIVE,
-    });
+    if (existingThread.status === THREAD_CHAT_STATUS_ARCHIVED) {
+      await dbService.updateChatThread(existingThread.id, {
+        status: THREAD_CHAT_STATUS_ACTIVE,
+        reOpenCount,
+      });
+    }
     return thread;
   }
   async deleteChatThread(threadId: number) {

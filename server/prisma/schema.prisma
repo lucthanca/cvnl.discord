@@ -52,16 +52,17 @@ model UserChannel {
 }
 
 model ChatThread {
-    id         Int      @id @default(autoincrement())
-    status     Int      @default(0) // 0: active, 1: closed
-    chatId     String
-    threadId   String   @unique
-    discordId  String
-    channelId  String
-    threadName String
-    createdAt  DateTime @default(now())
-    user       User     @relation(fields: [discordId, cvnlUserId], references: [discordId, cvnlUserId])
-    cvnlUserId String
+    id          Int      @id @default(autoincrement())
+    status      Int      @default(0) // 0: active, 1: closed
+    chatId      String
+    threadId    String   @unique
+    discordId   String
+    channelId   String
+    threadName  String
+    createdAt   DateTime @default(now())
+    user        User     @relation(fields: [discordId, cvnlUserId], references: [discordId, cvnlUserId])
+    cvnlUserId  String
+    reOpenCount Int      @default(0)
 
     @@unique([chatId, cvnlUserId])
     @@map("chat_threads")

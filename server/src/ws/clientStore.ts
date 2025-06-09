@@ -1,12 +1,16 @@
 
 import { Socket } from "socket.io";
+import { User } from "@prisma/client";
+import { Message } from "discord.js";
 
 export interface AuthenticatedClient {
   socket: Socket;
-  discordId: string;
-  cvnlUserId: string;
-  token: string;
+  user: User;
+  discordId: string; // Deprecated, will be removed in future versions
+  cvnlUserId: string; // Deprecated, will be removed in future versions
+  token: string; // Deprecated, will be removed in future versions
   activeChatId?: string;
+  activeEphemeralMessage?: Message;
 }
 
 export const clients: Map<string, AuthenticatedClient> = new Map();

@@ -1,5 +1,10 @@
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "discord.js";
 import commands from "./commands/index.js";
+import { clients, populateClientKey } from "~/ws/clientStore.js";
+import channelService from "~/services/channel.js";
+import { EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD } from "~/shared/constants.js";
+import { v4 as uuid } from "uuid";
+import { waitForEventWithTimeout } from "~/utils/emitWithTimeout.js";
 
 class DiscordBot
 {
@@ -63,6 +68,45 @@ class DiscordBot
         if (interaction.isRepliable()) {
           await interaction.reply({ content: 'Đã xảy ra lỗi khi xử lý lệnh.', ephemeral: true });
         }
+      }
+    });
+    this.client.on('messageCreate', async (message) => {
+      if (message.author.bot) return;
+      if (message.channel.isThread()) {
+        console.log(message.channel.id);
+        const chatThread = await channelService.getUserChatThreadByThreadId(message.channel.id);
+        if (!chatThread) {
+          await message.reply({
+            content: 'Không tìm thấy thông tin cuộc trò chuyện cho thread này. Dữ liệu có thể đã bị xóa hoặc không hợp lệ.',
+          });
+          return;
+        }
+        const socketClient = clients.get(populateClientKey(chatThread.cvnlUserId));
+        if (!socketClient) {
+          await message.reply({
+            content: 'Không tìm thấy client CVNL đang hoạt động cho cuộc trò chuyện này. Vui lòng thử lại sau.',
+          });
+          return;
+        }
+        try {
+          waitForEventWithTimeout(socketClient.socket, `${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE`, 10000).then(() => {}).catch(e => {
+            console.error(`❌ Timeout waiting for ${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE from client ${socketClient.cvnlUserId}`, e);
+            message.reply({
+              content: `❌ Tiến trình gửi tin nhắn đã hết thời gian chờ. Có thể Client đang bị mất kết nối, check lại trình duyệt mà cài Extension CVNL nhé!`,
+            });
+          });
+
+          // Emit the message to the CVNL client
+          socketClient.socket.emit(EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD, {
+            content: message.content,
+            uuid: uuid(),
+          });
+        } catch (e) {
+          await message.reply({
+            content: `❌ Tiến trình gửi tin nhắn đã hết thời gian chờ. Có thể Client đang bị mất kết nối, check lại trình duyệt mà cài Extension CVNL nhé!`,
+          })
+        }
+        return;
       }
     });
     this.client.on('error', console.error);

@@ -115,9 +115,10 @@ export default async function onAuth(socket: Socket, data: AuthMessage) {
   // Store authenticated client
   const authenticatedClient: AuthenticatedClient = {
     socket,
+    user,
+    token: data.token,
     discordId: user.discordId,
     cvnlUserId: user.cvnlUserId,
-    token: user.token,
   };
   clients.set(clientKey, authenticatedClient);
 

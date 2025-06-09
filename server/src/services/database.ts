@@ -134,14 +134,13 @@ class DatabaseService {
     }
   }
 
-  async getUser(discordId: string, cvnlUserId: string): Promise<UserData | null> {
+  async getUser(discordId: string, cvnlUserId: string) {
     try {
-      const user = await this.prisma.user.findUnique({
+      return await this.prisma.user.findUnique({
         where: {
-          discordId_cvnlUserId: {discordId, cvnlUserId },
+          discordId_cvnlUserId: { discordId, cvnlUserId },
         },
       });
-      return user as UserData | null;
     } catch (error) {
       console.error('Error getting user:', error);
       return null;
@@ -273,7 +272,7 @@ class DatabaseService {
     }
   }
 
-  async getUserChannel(discordId: string, cvnlUserId?: string): Promise<UserChannelData | null> {
+  async getUserChannel(discordId: string, cvnlUserId?: string) {
     try {
       if (cvnlUserId) {
         // Get channel for specific CVNL user
@@ -284,6 +283,7 @@ class DatabaseService {
               cvnlUserId,
             }
           },
+          include: { user: true }
         });
       } else {
         // Get any channel for this Discord user (backwards compatibility)
@@ -411,6 +411,17 @@ class DatabaseService {
       });
     } catch (error) {
       console.error('Error getting chat thread:', error);
+      return null;
+    }
+  }
+
+  async getChatThreadByThreadId(threadId: string) {
+    try {
+      return await this.prisma.chatThread.findUnique({
+        where: { threadId: threadId },
+      });
+    } catch (error) {
+      console.error('Error getting chat thread by ID:', error);
       return null;
     }
   }

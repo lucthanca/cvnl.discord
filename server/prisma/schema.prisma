@@ -55,7 +55,7 @@ model ChatThread {
     id         Int      @id @default(autoincrement())
     status     Int      @default(0) // 0: active, 1: closed
     chatId     String
-    threadId   String
+    threadId   String   @unique
     discordId  String
     channelId  String
     threadName String

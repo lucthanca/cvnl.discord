@@ -1,5 +1,6 @@
 import * as io from 'socket.io-client';
-import { EVENT_DISCORD_START_CHAT, EVENT_DISCORD_END_CHAT, EVENT_CVNL_CHAT_EVENT } from '../../server/src/shared/constants';
+import { EVENT_DISCORD_START_CHAT, EVENT_DISCORD_END_CHAT, EVENT_CVNL_CHAT_EVENT,EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD } from '../../server/src/shared/constants';
+import type { MessageFromDiscord } from '../../server/src/shared/constants';
 
 interface TokenData {
   id: string;
@@ -162,6 +163,19 @@ class CVNLManager {
       console.log(`[Discord-${tokenData.userName}] Received end chat command:`, data);
       this.handleEndChatFromDiscord(data, tokenData);
     });
+
+    socket.on(EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD, (data: MessageFromDiscord) => {
+      const cvnlSocket = this.sockets.get(tokenData.userId);
+      if (!cvnlSocket) {
+        socket.emit(`${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE`, {
+          status: 'error',
+          message: `Không tìm thấy kết nối CVNL cho người dùng ${tokenData.userName}. Vui lòng đảm bảo client CVNL đang chạy và đã đăng nhập.`
+        });
+        return;
+      }
+      this.sendToCVNL(cvnlSocket, 'c2', data);
+      socket.emit(`${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE`, { status: 'success', message: '' });
+    });
   }
 
   private handleStartChatFromDiscord(data: any, tokenData: TokenData): void {
@@ -217,7 +231,7 @@ class CVNLManager {
 
     // Emit end chat event to CVNL using the send function
     console.log(`[${tokenData.userName}] Ending chat via Discord command...`);
-    // this.sendToCVNL(cvnlSocket, 'c5', { chatId: data.chatId, reason: 'ended_by_discord' });
+    this.sendToCVNL(cvnlSocket, 'c5');
     discordSocket.emit(`${EVENT_DISCORD_END_CHAT}_RESPONSE`, {
       status: 'success',
       message: `Đã gửi lệnh kết thúc chat cho ${tokenData.userName}`
@@ -225,7 +239,7 @@ class CVNLManager {
   }
 
   // Add the send function for CVNL communication
-  private sendToCVNL(socket: SocketIOClient.Socket, type: string, data: any, callback?: Function): void {
+  private sendToCVNL(socket: SocketIOClient.Socket, type: string, data?: any, callback?: Function): void {
     if (!socket || !socket.connected) {
       console.error('Cannot send to CVNL: socket not connected');
       return;

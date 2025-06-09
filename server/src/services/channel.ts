@@ -4,15 +4,9 @@ import { getThreadName, sanitizeChannelName } from '../utils/channelUtils.js';
 import { client } from "../bot/index.js";
 
 export const THREAD_CHAT_STATUS_ACTIVE = 0;
+export const THREAD_CHAT_STATUS_ARCHIVED = 1;
 
 export type ThreadChannelWithNewFlag = ThreadChannel & { is_new?: boolean; is_recreated?: boolean };
-export interface UserChannel {
-  discordId: string;
-  channelId: string;
-  channelName: string;
-  guildId: string;
-  createdAt: string;
-}
 
 export class ChannelNotFoundError extends Error {
   constructor(message: string) {
@@ -179,7 +173,7 @@ export class ChannelService {
    * @param cvnlUserId - The CVNL user ID.
    * @return The user's channel or null if not found.
    */
-  async getUserChannel(discordId: string, cvnlUserId: string): Promise<TextChannel | null> {
+  async getChannel(discordId: string, cvnlUserId: string): Promise<TextChannel | null> {
     try {
       const channelInfo = await dbService.getUserChannel(discordId, cvnlUserId);
       if (!channelInfo) {
@@ -188,7 +182,7 @@ export class ChannelService {
 
       // Verify channel still exists on Discord
       try {
-        const channel = await client.channels.fetch(channelInfo.channelId) as TextChannel;
+        const channel = await client.channels.fetch(channelInfo.channelId);
         if (channel && channel.type === ChannelType.GuildText) {
           return channel;
         } else {
@@ -214,8 +208,13 @@ export class ChannelService {
   async getUserChatThread(chatId: string, cvnlUserId: string) {
     return await dbService.getChatThread(chatId, cvnlUserId);
   }
+  async getUserChatThreadByThreadId(threadId: string) {
+    return await dbService.getChatThreadByThreadId(threadId);
+  }
   async archiveChatThread(id: number) {
-
+    await dbService.updateChatThread(id, {
+      status: THREAD_CHAT_STATUS_ARCHIVED,
+    });
   }
   async deleteUserChannel(discordId: string, cvnlUserId?: string): Promise<boolean> {
     try {
@@ -283,7 +282,7 @@ export class ChannelService {
     if (!channel || channel.type !== ChannelType.GuildText) {
       throw new InvalidChannelTypeError('Invalid channel type for creating thread');
     }
-    const existingThread = await dbService.getChatThread(chatId, cvnlUserId);
+    const existingThread = await this.getUserChatThread(chatId, cvnlUserId);
     if (!existingThread) {
       const remoteThread = await this.createDiscordThread(channel, chatId) as ThreadChannelWithNewFlag;
       remoteThread.is_new = true;
@@ -309,9 +308,15 @@ export class ChannelService {
       });
       return remoteThread;
     }
+    await thread.setArchived(false);
+    await dbService.updateChatThread(existingThread.id, {
+      status: THREAD_CHAT_STATUS_ACTIVE,
+    });
     return thread;
   }
-
+  async deleteChatThread(threadId: number) {
+    return await dbService.deleteChatThreadById(threadId);
+  }
   async sendMessageToThread(threadId: string, content: string, embed?: any): Promise<void> {
     try {
       const thread = await this.getChannelById(threadId);

@@ -161,7 +161,7 @@ export class CVNLApiService {
   /**
    * Get Gender name based on the gender code.
    */
-  private getGenderName(genderCode: string): string {
+  public getGenderName(genderCode: string): string {
     const gender = genderCode.toLowerCase();
     const genderMap: { [key: string]: string } = {
       'other': 'Bí mật',

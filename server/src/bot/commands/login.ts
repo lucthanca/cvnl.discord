@@ -67,7 +67,7 @@ export default {
 
       // Tạo kênh chat mới cho người dùng
       // kiểm tra xem người dùng đã có kênh chat nào chưa
-      let textChannel = await channelService.getUserChannel(discordId, cvnlUser.id);
+      let textChannel = await channelService.getChannel(discordId, cvnlUser.id);
       if (!textChannel) {
         textChannel = await channelService.createUserChannel(
           interaction.guild,

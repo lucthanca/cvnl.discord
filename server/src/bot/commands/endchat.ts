@@ -4,27 +4,7 @@ import cvnlApiService from "~/services/api.js";
 import channelService from "~/services/channel.js";
 import { clients, populateClientKey } from "~/ws/clientStore.js";
 import { EVENT_DISCORD_END_CHAT } from "~/shared/constants.js";
-import { Socket } from "socket.io";
-
-function waitForEventWithTimeout<T = any>(
-  socket: Socket,
-  event: string,
-  timeoutMs: number
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      socket.removeListener(event, onEvent); // xoá listener nếu timeout
-      reject(new Error(`Timeout waiting for event '${event}'`));
-    }, timeoutMs);
-
-    const onEvent = (data: T) => {
-      clearTimeout(timer); // nhận được event thì huỷ timeout
-      resolve(data);
-    };
-
-    socket.once(event, onEvent);
-  });
-}
+import { waitForEventWithTimeout } from "~/utils/emitWithTimeout.js";
 
 export default {
   name: 'endchat',
@@ -79,18 +59,18 @@ export default {
       await interaction.editReply({ content: '🚫 Client hiện đang offline. Không thể gửi lệnh endchat!' });
       return;
     }
-    client.socket.emit(EVENT_DISCORD_END_CHAT);
     try {
-      await waitForEventWithTimeout(client.socket, `${EVENT_DISCORD_END_CHAT}_RESPONSE`, 10000).then(async (data: any) => {
+      waitForEventWithTimeout(client.socket, `${EVENT_DISCORD_END_CHAT}_RESPONSE`, 10000).then(async (data: any) => {
         await threadChannel.setArchived(true, '🔚 End chat command issued by user');
         await channelService.archiveChatThread(chatThread.id);
-        await interaction.editReply({ content: '🔚 Đã gửi lệnh kết thúc cuộc trò chuyện đến người dùng' });
+        await interaction.editReply({ content: '🔚 Đã kết thúc cuộc trò chuyện!' });
       });
+      client.socket.emit(EVENT_DISCORD_END_CHAT);
     } catch (e) {
       console.log(`❌ Timeout waiting for ${EVENT_DISCORD_END_CHAT}_RESPONSE from client ${client.cvnlUserId}`);
       await interaction.editReply({
-        content: `❌ Tiến trình kết thúc cuộc trò chuyện đã hết thời gian chờ. Vui lòng thử lại sau.`,
-      })
+        content: `❌ Tiến trình kết thúc cuộc trò chuyện đã hết thời gian chờ. Có thể Client đang bị mất kết nối, check lại trình duyệt mà cài Extension CVNL nhé!`,
+      });
     }
     return;
   }

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, OAuthSession } from '@prisma/client';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { mkdir } from 'fs/promises';
@@ -16,16 +16,6 @@ export interface UserData {
   cvnlUserJob?: number | null;
   cvnlUserAge?: number | null;
   createdAt?: Date;
-}
-
-export interface OAuthSessionData {
-  id?: number;
-  discordId: string;
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
 }
 
 export interface UserChannelData {
@@ -210,7 +200,7 @@ class DatabaseService {
   }
 
   // OAuth Session methods
-  async saveOAuthSession(sessionData: Omit<OAuthSessionData, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> {
+  async saveOAuthSession(sessionData: Omit<OAuthSession, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> {
     try {
       await this.prisma.oAuthSession.upsert({
         where: { discordId: sessionData.discordId },
@@ -227,7 +217,7 @@ class DatabaseService {
     }
   }
 
-  async getOAuthSession(discordId: string): Promise<OAuthSessionData | null> {
+  async getOAuthSession(discordId: string): Promise<OAuthSession | null> {
     try {
       return await this.prisma.oAuthSession.findUnique({
         where: { discordId },

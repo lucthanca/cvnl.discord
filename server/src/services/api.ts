@@ -85,8 +85,9 @@ export class CVNLApiService {
       const response = await this.client.post('/auth/verifyToken', {
         token
       });
-      
-      console.log('API Response:', JSON.stringify(response.data, null, 2));
+
+      // For debugging purposes, log the response data
+      // console.log('API Response:', JSON.stringify(response.data, null, 2));
       
       if (response.status === 200 && response.data.status === 'ok') {
         // Return the user info from the data field
@@ -130,7 +131,8 @@ export class CVNLApiService {
       }
 
       const data = await response.json() as ChatInfoResponse;
-      console.log('Chat info API response:', data);
+      // For debugging purposes, log the response data
+      // console.log('Chat info API response:', data);
       
       // Check if user has active conversation
       if (data.status === "ok" && data.data?.chat && data.data.chat.status === 'chatting') {

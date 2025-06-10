@@ -154,6 +154,15 @@ class CVNLManager {
       console.error(`[Discord-${tokenData.userName}] Failed to reconnect after all attempts`);
     });
 
+    socket.on('discord_typing', (data: any) => {
+      console.log(`[Discord-${tokenData.userName}] Received typing event:`, data);
+      const cvnlSocket = this.sockets.get(tokenData.userId);
+      if (!cvnlSocket) {
+        return;
+      }
+      this.sendToCVNL(cvnlSocket, 'c4');
+    });
+
     socket.on(EVENT_DISCORD_START_CHAT, (data: any) => {
       console.log(`[Discord-${tokenData.userName}] Received start chat command:`, data);
       this.handleStartChatFromDiscord(data, tokenData);
@@ -173,8 +182,9 @@ class CVNLManager {
         });
         return;
       }
-      this.sendToCVNL(cvnlSocket, 'c2', data);
-      socket.emit(`${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE`, { status: 'success', message: '' });
+      this.sendToCVNL(cvnlSocket, 'c2', data, (data: any) => {
+        socket.emit(`${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE`, { status: 'success', message: '', data });
+      });
     });
   }
 
@@ -390,6 +400,7 @@ class CVNLManager {
 
     socket.on('c4', (data: any) => {
       console.log(`[${tokenData.userName}] Received c4 event:`, data);
+      this.fireCVNLEventToDiscord(tokenData.userId, 'c4', {}, 'Đang gõ!');
     });
 
     socket.on('c10', (data: any) => {
@@ -398,6 +409,7 @@ class CVNLManager {
 
     socket.on('c6', (data: any) => {
       console.log(`[${tokenData.userName}] Received c6 event:`, data);
+      this.fireCVNLEventToDiscord(tokenData.userId, 'c6', data, 'Người lạ đã thích bạn');
     });
 
     socket.on('c7', (data: any) => {

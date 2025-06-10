@@ -1,6 +1,7 @@
 export type MessageFromDiscord = {
   content: string;
   uuid: string;
+  replyId?: string;
 };
 export const EVENT_DISCORD_START_CHAT = 'start_chat';
 export const EVENT_DISCORD_END_CHAT = 'end_chat';

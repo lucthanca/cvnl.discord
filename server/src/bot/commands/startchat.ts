@@ -16,6 +16,17 @@ export default {
     const discordUserId = interaction.user.id;
     const channelId = interaction.channelId;
     try {
+      const oauthUser = await dbService.getResource().oAuthSession.findUnique({
+        where: {
+          discordId: interaction.user.id,
+        }
+      });
+      if (!oauthUser) {
+        await interaction.editReply({
+          content: '❌ Tài khoản Discord chưa được liên kết.',
+        });
+        return;
+      }
       console.log(`🟢 Nhận lệnh bắt đầu chat từ người dùng Discord: ${discordUserId} trong kênh: ${channelId}`);
 
       // Get remote channel của user

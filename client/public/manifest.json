@@ -47,7 +47,8 @@
     "https://discord.com/*",
     "https://discordapp.com/*",
     "http://localhost:3000/*",
-    "http://localhost:3001/*"
+    "http://localhost:3001/*",
+    "http://discord.vadu.com/*"
   ],
   "oauth2": {
     "client_id": "1380138485293256808",

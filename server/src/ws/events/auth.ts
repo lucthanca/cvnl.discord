@@ -20,6 +20,7 @@ const restoreThreadChat = async (client: AuthenticatedClient) => {
 
   // ensure chat thread exists
   const channel = await channelService.createChatThread(client.discordId, client.activeChatId, client.cvnlUserId);
+  client.activeThread = channel;
   if (channel.is_recreated) {
     channel.send({
       embeds: [{
@@ -105,11 +106,12 @@ export default async function onAuth(socket: Socket, data: AuthMessage) {
     }
   });
 
-  console.log('👤 Tìm thấy người dùng trong cơ sở dữ liệu:', {
-    discordId: user.discordId,
-    cvnlUserId: user.cvnlUserId,
-    name: user.cvnlUserName
-  });
+  // const dta = {
+  //   discordId: user.discordId,
+  //   cvnlUserId: user.cvnlUserId,
+  //   name: user.cvnlUserName
+  // };
+  console.log('👤 Tìm thấy người dùng trong cơ sở dữ liệu !!!');
 
   const clientKey = populateClientKey(userInfo.id);
   // Remove existing connection for this user if any (but don't disconnect the socket)

@@ -23,6 +23,13 @@ router.post('/oauth/token', async (req: Request, res: Response) => {
 
     const tokenData = await discordOAuth.exchangeCodeForToken(code, redirect_uri);
     const userInfo = await discordOAuth.getUserInfo(tokenData.access_token);
+    
+    dbService.saveOAuthSession({
+      discordId: userInfo.id,
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: tokenData.expires_in
+    });
 
     res.json({
       access_token: tokenData.access_token,

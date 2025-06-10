@@ -211,8 +211,17 @@ export class ChannelService {
   async getUserChatThreadByThreadId(threadId: string) {
     return await dbService.getChatThreadByThreadId(threadId);
   }
-  async archiveChatThread(id: number) {
-    await dbService.updateChatThread(id, {
+  async archiveChatThread(id: number | string, uniqueField: string = 'id') {
+    if (uniqueField !== 'id') {
+      await dbService.getResource().chatThread.update({
+        where: { threadId: id + "" },
+        data: {
+          status: THREAD_CHAT_STATUS_ARCHIVED,
+        },
+      });
+      return;
+    }
+    await dbService.updateChatThread(parseInt(id + ""), {
       status: THREAD_CHAT_STATUS_ARCHIVED,
     });
   }

@@ -31,7 +31,7 @@ model OAuthSession {
     discordId    String   @unique
     accessToken  String
     refreshToken String
-    expiresAt    DateTime
+    expiresAt    Int
     createdAt    DateTime @default(now())
     updatedAt    DateTime @updatedAt
 
@@ -54,18 +54,29 @@ model UserChannel {
 }
 
 model ChatThread {
-    id          Int      @id @default(autoincrement())
-    status      Int      @default(0) // 0: active, 1: closed
+    id          Int             @id @default(autoincrement())
+    status      Int             @default(0) // 0: active, 1: closed
     chatId      String
-    threadId    String   @unique
+    threadId    String          @unique
     discordId   String
     channelId   String
     threadName  String
-    createdAt   DateTime @default(now())
-    user        User     @relation(fields: [discordId, cvnlUserId], references: [discordId, cvnlUserId])
+    createdAt   DateTime        @default(now())
+    user        User            @relation(fields: [discordId, cvnlUserId], references: [discordId, cvnlUserId])
     cvnlUserId  String
-    reOpenCount Int      @default(0)
+    reOpenCount Int             @default(0)
+    messages    ThreadMessage[]
 
     @@unique([chatId, cvnlUserId])
     @@map("chat_threads")
+}
+
+model ThreadMessage {
+    threadId     String
+    discordMsgId String     @unique
+    cvnlMsgId    String     @unique
+    thread       ChatThread @relation(fields: [threadId], references: [threadId])
+
+    @@id([discordMsgId, cvnlMsgId])
+    @@map("thread_messages")
 }

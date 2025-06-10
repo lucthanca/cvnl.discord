@@ -15,6 +15,14 @@ export default {
   description: 'Đăng nhập vào bot Discord',
   type: ['chat_input', 'modal_submit'],
   handle: async (interaction: ChatInputCommandInteraction) => {
+    // check if user id === 521375315860389890 -> oke, else notify user not allowed
+    if (interaction.user.id !== '521375315860389890') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      await interaction.editReply({
+        content: '❌ Chức năng tạm khoá với tài khoản của bạn.'
+      });
+      return;
+    }
     // Hiển thị modal đăng nhập với token CVNL
     const modal = new ModalBuilder()
       .setCustomId('login')

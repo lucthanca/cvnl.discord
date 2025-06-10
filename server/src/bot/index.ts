@@ -5,6 +5,7 @@ import channelService from "~/services/channel.js";
 import { EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD } from "~/shared/constants.js";
 import { v4 as uuid } from "uuid";
 import { waitForEventWithTimeout } from "~/utils/emitWithTimeout.js";
+import dbService from "~/services/database.js";
 
 class DiscordBot
 {
@@ -73,7 +74,6 @@ class DiscordBot
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
       if (message.channel.isThread()) {
-        console.log(`📝 Received message in thread`, message);
         const chatThread = await channelService.getUserChatThreadByThreadId(message.channel.id);
         if (!chatThread) {
           await message.reply({
@@ -95,17 +95,57 @@ class DiscordBot
           return;
         }
         try {
-          waitForEventWithTimeout(socketClient.socket, `${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE`, 10000).then(() => {}).catch(e => {
+          let replyId = undefined;
+          if (message.reference?.messageId) {
+            const threadMessage = await dbService.getResource().threadMessage.findUnique({
+              where: { discordMsgId: message.reference.messageId },
+            });
+            console.log(`Found thread message for reply: ${JSON.stringify(threadMessage)}`);
+            if (threadMessage) {
+              replyId = threadMessage.cvnlMsgId;
+            }
+          }
+          waitForEventWithTimeout<{
+            status: 'success' | 'error';
+            message: string;
+            data: {
+              id: string;
+              uuid: string;
+              status: 'delivered' | 'sent';
+            }
+          }>(socketClient.socket, `${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE`, 10000).then(async (res) => {
+            const { data } = res;
+            const { id: cvnlMsgId } = data;
+            await dbService.getResource().threadMessage.create({
+              data: {
+                discordMsgId: message.id,
+                cvnlMsgId,
+                threadId: message.channel.id
+              }
+            })
+          }).catch(e => {
             console.error(`❌ Timeout waiting for ${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE from client ${socketClient.cvnlUserId}`, e);
             message.reply({
               content: `❌ Tiến trình gửi tin nhắn đã hết thời gian chờ. Có thể Client đang bị mất kết nối, check lại trình duyệt mà cài Extension CVNL nhé!`,
             });
           });
 
+          let messageContent = message.content;
+          if (message.attachments.size > 0) {
+            message.attachments.forEach(attachment => {
+              if (attachment.contentType && !attachment.contentType.startsWith('image/')) {
+                messageContent += `\n[File](${attachment.proxyURL})\n`;
+              } else {
+                messageContent += `\n[Ảnh](${attachment.proxyURL})\n`;
+              }
+            });
+          }
+
           // Emit the message to the CVNL client
           socketClient.socket.emit(EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD, {
-            content: message.content,
+            content: messageContent,
             uuid: uuid(),
+            replyId,
           });
         } catch (e) {
           await message.reply({
@@ -113,6 +153,19 @@ class DiscordBot
           })
         }
         return;
+      }
+    });
+    this.client.on('typingStart', (typing) => {
+      if (typing.channel.isThread()) {
+        console.log(`${typing.user.tag} is typing in ${typing.channel.id}`);
+        const client = Array.from(clients.values()).find(c => c.activeThread?.id === typing.channel.id);
+        if (client) {
+          client.socket.emit('discord_typing', {
+            threadId: typing.channel.id,
+            userId: typing.user.id,
+            username: typing.user.username,
+          });
+        }
       }
     });
     this.client.on('error', console.error);

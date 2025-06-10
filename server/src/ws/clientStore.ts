@@ -1,7 +1,7 @@
 
 import { Socket } from "socket.io";
 import { User, OAuthSession } from "@prisma/client";
-import { Message } from "discord.js";
+import { Message, ThreadChannel } from "discord.js";
 
 export interface AuthenticatedClient {
   socket: Socket;
@@ -11,6 +11,7 @@ export interface AuthenticatedClient {
   token: string; // Deprecated, will be removed in future versions
   activeChatId?: string;
   activeEphemeralMessage?: Message;
+  activeThread?: ThreadChannel;
 }
 
 export const clients: Map<string, AuthenticatedClient> = new Map();

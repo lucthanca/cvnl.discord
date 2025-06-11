@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "discord.js";
+import { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, Events } from "discord.js";
 import commands from "./commands/index.js";
 import { clients, populateClientKey } from "~/ws/clientStore.js";
 import channelService from "~/services/channel.js";
@@ -26,8 +26,14 @@ class DiscordBot
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessageTyping
+        GatewayIntentBits.GuildMessageTyping,
+        GatewayIntentBits.GuildMessageReactions,
       ],
+      partials: [
+        Partials.Message,
+        Partials.Channel,
+        Partials.Reaction,
+      ]
     });
     this.rest = new REST();
     this.setupEventHandlers();
@@ -131,12 +137,15 @@ class DiscordBot
           });
 
           let messageContent = message.content;
+          if (messageContent.trim().length > 0 && message.attachments.size > 0) {
+            messageContent += `\n---\n`;
+          }
           if (message.attachments.size > 0) {
             message.attachments.forEach(attachment => {
               if (attachment.contentType && !attachment.contentType.startsWith('image/')) {
-                messageContent += `\n[File](${attachment.proxyURL})\n`;
+                messageContent += `[File](${attachment.proxyURL})\n`;
               } else {
-                messageContent += `\n[Ảnh](${attachment.proxyURL})\n`;
+                messageContent += `[Ảnh](${attachment.proxyURL})\n`;
               }
             });
           }
@@ -164,6 +173,32 @@ class DiscordBot
             threadId: typing.channel.id,
             userId: typing.user.id,
             username: typing.user.username,
+          });
+        }
+      }
+    });
+    this.client.on(Events.MessageReactionAdd, async (reaction, user) => {
+      if (user.bot) return;
+      if (reaction.message.channel.isThread()) {
+        if (reaction.partial) {
+          try {
+            await reaction.fetch();
+          } catch (error) {
+            console.error('Không fetch được reaction:', error);
+            return;
+          }
+        }
+        console.log(`${user.tag} vừa react emoji ${reaction.emoji.name} vào message ${reaction.message.id}`);
+        const client = Array.from(clients.values()).find(c => c.activeThread?.id === reaction.message.channel.id);
+        if (client) {
+          const msg = await dbService.getResource().threadMessage.findUnique({ where: { discordMsgId: reaction.message.id } });
+          if (!msg) return;
+          client.socket.emit(Events.MessageReactionAdd, {
+            userId: user.id,
+            messageId: msg.cvnlMsgId,
+            reaction: reaction.emoji.name,
+          }, (res: any) => {
+            console.log(`Response from CVNL client for reaction: ${JSON.stringify(res)}`);
           });
         }
       }

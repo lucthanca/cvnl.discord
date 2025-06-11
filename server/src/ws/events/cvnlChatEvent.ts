@@ -9,6 +9,8 @@ import dbService from "~/services/database.js";
 
 type EventHandler = (client: AuthenticatedClient, data: any) => Promise<void>;
 
+let c17Locked = false;
+
 type C2EventData = {
   data: {
     id: string; // Chat ID
@@ -87,6 +89,8 @@ const c1: EventHandler = async (client, data: any) => {
       }]
     });
 
+    console.log(` User data: `, data.data);
+    
     // Send message to thread to notify about the stranger joining chat
     await client.activeThread.send({
       embeds: [{
@@ -120,6 +124,18 @@ const c1: EventHandler = async (client, data: any) => {
         }
       }]
     });
+    // Add discord user to the thread
+    let discordUser = await client.activeThread.guild.members.cache.get(client.discordId);
+    if (!discordUser) {
+      console.warn(`Discord user ${client.discordId} not found in guild ${client.activeThread.guild.id}`);
+    } else {
+      discordUser = await client.activeThread.guild.members.fetch(client.discordId);
+    }
+    if (!discordUser) {
+      console.error(`Failed to fetch Discord user ${client.discordId} in guild ${client.activeThread.guild.id}`);
+      return;
+    }
+    await client.activeThread.members.add(discordUser);
     // Emit the message to the CVNL client
     client.socket.emit(EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD, {
       content: `Chào cậu nhaaaa!!!`,
@@ -274,57 +290,17 @@ const c5: EventHandler = async (client) => {
   client.activeEphemeralMessage = undefined;
 };
 const c17: EventHandler = async (client, data) => {
+  if (c17Locked) return;
+  c17Locked = true;
   const { order } = data.data;
-  if (order <= 0) {
-    console.log(`User ${client.user.cvnlUserId} found chat partner (order: ${order}), no notification sent`);
-    return;
-  }
-  const channel = await channelService.getChannel(client.user.discordId, client.user.cvnlUserId);
-  if (!channel) {
-    console.warn(`No channel found for user ${client.user.cvnlUserId}, cannot send order notification`);
-    return;
-  }
-  const description = `⏳ **${client.user.cvnlUserId}** đang ở vị trí **${order}** trong hàng đợi`;
-  if (client.activeEphemeralMessage) {
-    await client.activeEphemeralMessage.edit({
-      embeds: [{
-        title: '📊 Cập nhật hàng đợi',
-        description: description,
-        color: 0xffa500, // Orange
-        fields: [
-          {
-            name: '👤 Người dùng',
-            value: client.user.cvnlUserName,
-            inline: true
-          },
-          {
-            name: '🆔 CVNL User ID',
-            value: client.user.cvnlUserId.slice(-8),
-            inline: true
-          },
-          {
-            name: '📍 Vị trí',
-            value: `#${order}`,
-            inline: true
-          },
-          {
-            name: '🎭 Discord ID',
-            value: client.user.discordId.slice(-8),
-            inline: true
-          }
-        ],
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: `CVNL: ${client.user.cvnlUserId.slice(-8)} | Discord: ${client.user.discordId.slice(-8)}`
-        }
-      }],
-    });
-    return;
-  }
-  client.activeEphemeralMessage = await channel.send({
-    embeds: [{
+  try {
+    if (order <= 0) {
+      throw new Error(`User ${client.user.cvnlUserId} found chat partner (order: ${order}), no notification sent`);
+    }
+    
+    const embeds = [{
       title: '📊 Cập nhật hàng đợi',
-      description: description,
+      description: `⏳ **${client.user.cvnlUserId}** đang ở vị trí **${order}** trong hàng đợi`,
       color: 0xffa500, // Orange
       fields: [
         {
@@ -352,11 +328,27 @@ const c17: EventHandler = async (client, data) => {
       footer: {
         text: `CVNL: ${client.user.cvnlUserId.slice(-8)} | Discord: ${client.user.discordId.slice(-8)}`
       }
-    }],
-    options: {
-      flags: MessageFlags.Ephemeral,
+    }];
+    if (client.activeEphemeralMessage) {
+      await client.activeEphemeralMessage.edit({ embeds });
+    } else {
+      const channel = await channelService.getChannel(client.user.discordId, client.user.cvnlUserId);
+      if (!channel) {
+        throw new Error(`No channel found for user ${client.user.cvnlUserId}, cannot send order notification`);
+      }
+      client.activeEphemeralMessage = await channel.send({
+        embeds,
+        options: { flags: MessageFlags.Ephemeral }
+      });
     }
-  });
+  } catch (error: any) {
+    if (error instanceof Error) {
+      console.log(error.message);
+    } else {
+      console.error(`Error handling C17 event for user ${client.user.cvnlUserId}:`, error);
+    }
+  }
+  c17Locked = false;
 };
 const c4: EventHandler = async (client) => {
   // This event is triggered when the stranger is typing
@@ -369,6 +361,36 @@ const c4: EventHandler = async (client) => {
   console.log(`🔔 CVNL Chat Event: c4 (stranger typing) for user ${client.user.cvnlUserId} with chat ID: ${chatId}`)
   await activeThread.sendTyping();
 }
+const c20: EventHandler = async (client, data) => {
+  // This event is triggered when the stranger reactions to a message
+  const chatId = client.activeChatId;
+  if (!chatId) {
+    console.warn(`No active chat for client ${client.user.cvnlUserId}, cannot handle C20 event`);
+    return;
+  }
+  console.log(`🔔 CVNL Chat Event: c20 (stranger reacted) for user ${client.user.cvnlUserId} with chat ID: ${chatId}`)
+  const messageId = data.data.id;
+  const reactionIcon = data.data.reaction;
+
+  if (!messageId || !reactionIcon) {
+    console.warn(`No message ID or reaction icon provided in C20 event data for user ${client.user.cvnlUserId}`);
+    return;
+  }
+  const activeThread = client.activeThread;
+  if (!activeThread) {
+    console.warn(`No active thread for chat ID ${chatId} for user ${client.user.cvnlUserId}`);
+    return;
+  }
+  try {
+    const msg = await dbService.getResource().threadMessage.findUnique({ where: { cvnlMsgId: messageId } });
+    if (!msg) return;
+    const discordMsg = await activeThread.messages.fetch(msg.discordMsgId);
+    if (!discordMsg) return;
+    await discordMsg.react(reactionIcon);
+  } catch (error) {
+    console.error(`Error reacting to message ${messageId} in thread ${activeThread.id} for chat ID ${chatId}:`, error);
+  }
+}
 const handlers: Map<string, EventHandler> = new Map([
   ["c1", c1],
   ["c2", c2],
@@ -376,6 +398,7 @@ const handlers: Map<string, EventHandler> = new Map([
   ["c4", c4],
   ["c17", c17],
   ["c6", c6],
+  ["c20", c20],
 ]);
 
 export default async function onCVNLChatEvent(socket: Socket, data: any) {

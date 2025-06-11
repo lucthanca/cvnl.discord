@@ -186,6 +186,21 @@ class CVNLManager {
         socket.emit(`${EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD}_RESPONSE`, { status: 'success', message: '', data });
       });
     });
+    socket.on("messageReactionAdd", (data: { userId: string; messageId: string; reaction: string }) => {
+      console.log(`[Discord-${tokenData.userName}] Received reaction add event:`, data);
+      const cvnlSocket = this.sockets.get(tokenData.userId);
+      if (!cvnlSocket) {
+        return;
+      }
+      // c19 is event for adding reaction to a message CVNL
+      // c20 is event cvnl send reaction to client
+      this.sendToCVNL(cvnlSocket, 'c19', {
+        id: data.messageId,
+        reaction: data.reaction,
+      }, (response: any) => {
+        socket.emit('messageReactionAdd_RESPONSE', response);
+      });
+    });
   }
 
   private handleStartChatFromDiscord(data: any, tokenData: TokenData): void {
@@ -422,6 +437,7 @@ class CVNLManager {
 
     socket.on('c20', (data: any) => {
       console.log(`[${tokenData.userName}] Received c20 event:`, data);
+      this.fireCVNLEventToDiscord(tokenData.userId, 'c20', data, 'Người lạ react tin nhắn của bạn');
     });
 
     socket.on('c24', (data: any) => {

@@ -158,7 +158,8 @@ class DiscordBot
           });
         } catch (e) {
           await message.reply({
-            content: `❌ Tiến trình gửi tin nhắn đã hết thời gian chờ. Có thể Client đang bị mất kết nối, check lại trình duyệt mà cài Extension CVNL nhé!`,
+            content: `❌ Tiến trình gửi tin nhắn đã hết thời gian chờ. Có thể Client đang bị mất kết nối, check lại trình duyệt mà cài Extension CVNL nhé!` +
+            `\nHoặc cũng có thể do đối phương đã rời khỏi cuộc trò chuyện.`,
           })
         }
         return;

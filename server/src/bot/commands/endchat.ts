@@ -37,6 +37,8 @@ export default {
       return;
     }
     const activeClient = Array.from(clients.values()).find((client) => {
+      // log status of each client
+      console.log(`Client ${client.cvnlUserId} activeThread: ${client.activeThread?.id}, disconnected: ${client.socket.disconnected}`);
       return client.activeThread?.id === threadChannel.id && !client.socket.disconnected;
     });
     if (!activeClient) {

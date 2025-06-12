@@ -3,6 +3,7 @@ import cvnlApiService from "~/services/api.js";
 import dbService from "~/services/database.js";
 import { AuthenticatedClient, clients, populateClientKey } from "~/ws/clientStore.js";
 import channelService from "~/services/channel.js";
+import cvnlChatEvent from "~/ws/events/cvnlChatEvent.js";
 
 export interface AuthMessage {
   token: string;
@@ -113,6 +114,8 @@ export default async function onAuth(socket: Socket, data: AuthMessage) {
     console.log('🔄 Huỷ theo dõi kết nối đang tồn tại', existingClientKey);
     clients.delete(existingClientKey);
   }
+
+  socket.on('cvnlChatEvent', (data: any) => cvnlChatEvent(socket, data));
 
   // Store authenticated client
   const authenticatedClient: AuthenticatedClient = {

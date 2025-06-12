@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light theme */
+.light {
+  --bg: #ffffff;
+  --text: #1f2937;
+  --text-secondary: #6b7280;
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --border: #e5e7eb;
+  --nav: #f9fafb;
+  --input: #ffffff;
+  --input-field: #ffffff;
+  --message-bg: #f3f4f6;
+}
+
+/* Dark theme */
+.dark {
+  --bg: #111827;
+  --text: #f9fafb;
+  --text-secondary: #9ca3af;
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --border: #374151;
+  --nav: #1f2937;
+  --input: #1f2937;
+  --input-field: #374151;
+  --message-bg: #374151;
+}
+
+/* Purple theme */
+.purple {
+  --bg: #1e1b4b;
+  --text: #e0e7ff;
+  --text-secondary: #a5b4fc;
+  --primary: #8b5cf6;
+  --primary-dark: #7c3aed;
+  --border: #3730a3;
+  --nav: #312e81;
+  --input: #312e81;
+  --input-field: #4338ca;
+  --message-bg: #4338ca;
+}
+
+/* Blue theme */
+.blue {
+  --bg: #0c4a6e;
+  --text: #e0f2fe;
+  --text-secondary: #7dd3fc;
+  --primary: #0ea5e9;
+  --primary-dark: #0284c7;
+  --border: #075985;
+  --nav: #164e63;
+  --input: #164e63;
+  --input-field: #0369a1;
+  --message-bg: #0369a1;
+}
+
+/* Green theme */
+.green {
+  --bg: #14532d;
+  --text: #dcfce7;
+  --text-secondary: #86efac;
+  --primary: #22c55e;
+  --primary-dark: #16a34a;
+  --border: #166534;
+  --nav: #15803d;
+  --input: #15803d;
+  --input-field: #16a34a;
+  --message-bg: #16a34a;
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}

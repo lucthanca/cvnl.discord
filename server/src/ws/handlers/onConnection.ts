@@ -12,7 +12,7 @@ for (const file of eventFiles) {
   const filePath = path.join(eventsDir, file);
   const fileUrl = pathToFileURL(filePath).href;
   const eventHandler = (await import(fileUrl)).default;
-  if (typeof eventHandler === 'function') {
+  if (typeof eventHandler === 'function' && eventName !== "cvnlChatEvent") {
     loadedEvents.set(eventName, eventHandler);
   } else {
     console.warn(`Event handler in ${file} is not a function, skipping.`);

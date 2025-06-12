@@ -114,13 +114,18 @@ router.post('/oauth/refresh', async (req: Request, res: Response) => {
 router.get('/tokens/:discordUserId', async (req: Request, res: Response) => {
   try {
     const { discordUserId } = req.params;
-
     if (!discordUserId) {
       return res.status(400).json({ error: 'Discord user ID is required' });
     }
+    const oauthSession = await dbService.getOAuthSession(discordUserId);
 
-    // Get all tokens for this Discord user
-    const userTokens = await dbService.getUsersByDiscordId(discordUserId);
+    if (!oauthSession) {
+      return res.status(404).json({ error: 'Discord user not found or not authenticated' });
+    }
+    
+
+    // Get all tokens for this admin user
+    const userTokens = await dbService.getAllUsers();
 
     const tokensResponse = userTokens.map((user: any) => ({
       id: user.cvnlUserId,

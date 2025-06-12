@@ -5,6 +5,7 @@ import { Message, ThreadChannel } from "discord.js";
 
 export interface AuthenticatedClient {
   socket: Socket;
+  privateChatSocket?: Socket; // Optional private chat socket for direct messages
   user: User;
   discordId: string; // Deprecated, will be removed in future versions
   cvnlUserId: string; // Deprecated, will be removed in future versions

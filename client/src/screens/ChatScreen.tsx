@@ -1,5 +1,4 @@
 import React from 'react';
-import ChatHeader from '../components/Chat/ChatHeader';
 import MessageList from '../components/Chat/MessageList';
 import MessageInput from '../components/Chat/MessageInput';
 import TypingIndicator from '../components/Chat/TypingIndicator';
@@ -18,9 +17,8 @@ const ChatScreen: React.FC = () => {
   } = useChatScreen();
 
   return (
-    <div className="flex flex-col h-full bg-theme-bg">
-      <ChatHeader />
-      <div className="flex-1 flex flex-col min-h-0">
+    <div className="w-full h-full flex flex-col bg-theme-bg">
+      <div className="flex-1 w-full flex flex-col overflow-hidden">
         <MessageList messages={messages} />
         {isTyping && <TypingIndicator />}
         <MessageInput

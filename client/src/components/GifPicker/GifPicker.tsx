@@ -18,7 +18,7 @@ const GifPicker: React.FC<GifPickerProps> = ({ onGifSelect, onClose }) => {
   ];
 
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-2 bg-theme-nav rounded-lg shadow-lg border border-theme-border p-4 max-h-96">
+    <div className="bg-theme-nav rounded-lg shadow-lg border border-theme-border p-4 max-h-96">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-medium text-theme-text">GIFs</h3>
         <button

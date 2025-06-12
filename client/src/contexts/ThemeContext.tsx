@@ -15,14 +15,10 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<ThemeType>('light');
-
-  useEffect(() => {
+  const [theme, setTheme] = useState<ThemeType>(() => {
     const savedTheme = localStorage.getItem('chat-theme') as ThemeType;
-    if (savedTheme && ['light', 'dark', 'purple', 'blue', 'green'].includes(savedTheme)) {
-      setTheme(savedTheme);
-    }
-  }, []);
+    return (savedTheme && ['light', 'dark', 'purple', 'blue', 'green'].includes(savedTheme)) ? savedTheme : 'light';
+  });
 
   useEffect(() => {
     localStorage.setItem('chat-theme', theme);
@@ -35,11 +31,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const isDark = theme === 'dark' || theme === 'purple' || theme === 'blue';
 
-  const value = React.useMemo(() => ({
+  const value = {
     theme,
     setTheme,
     isDark
-  }), [theme, isDark]);
+  };
 
   return (
     <ThemeContext.Provider value={value}>

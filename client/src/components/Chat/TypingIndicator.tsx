@@ -5,7 +5,7 @@ const TypingIndicator: React.FC = () => {
     <div className="flex justify-start px-4 py-2">
       <div className="flex items-center space-x-2">
         <img
-          src="https://via.placeholder.com/32"
+          src="https://placehold.co/32"
           alt="User typing"
           className="w-8 h-8 rounded-full"
         />

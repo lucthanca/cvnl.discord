@@ -7,8 +7,8 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
-    <div className="flex flex-col h-screen bg-theme-bg text-theme-text">
-      <main className="flex-1 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-theme-bg text-theme-text">
+      <main className="flex-1 w-full overflow-hidden">
         {children}
       </main>
       <BottomNavigation />

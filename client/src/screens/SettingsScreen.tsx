@@ -43,14 +43,35 @@ const SettingsScreen: React.FC = () => {
     },
   ];
 
+  // Add a small delay to ensure theme is properly loaded
+  const [isLoaded, setIsLoaded] = React.useState(false);
+  
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoaded(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <div className="h-screen bg-theme-bg text-theme-text flex flex-col">
+        <div className="bg-theme-nav border-b border-theme-border p-4 flex-shrink-0">
+          <h1 className="text-xl font-semibold">Settings</h1>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full bg-theme-bg text-theme-text overflow-y-auto">
+    <div className="w-full h-full bg-theme-bg text-theme-text flex flex-col">
       {/* Header */}
-      <div className="bg-theme-nav border-b border-theme-border p-4">
+      <div className="bg-theme-nav border-b border-theme-border p-4 flex-shrink-0">
         <h1 className="text-xl font-semibold">Settings</h1>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="flex-1 w-full overflow-y-auto p-4 space-y-6">
         {/* Theme Selection */}
         <div className="bg-theme-nav rounded-lg p-4">
           <div className="flex items-center space-x-3 mb-4">

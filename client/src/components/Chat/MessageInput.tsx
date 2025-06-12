@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { PaperAirplaneIcon, PhotoIcon, FaceSmileIcon, MicrophoneIcon, PlusIcon } from '@heroicons/react/24/outline';
 import EmojiPicker from '../EmojiPicker/EmojiPicker';
+import IOSBottomSheet from "../BottomSheet/index.js";
 import GifPicker from '../GifPicker/GifPicker';
 import VoiceRecorder from '../VoiceRecorder/VoiceRecorder';
 
@@ -26,6 +27,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showAttachments, setShowAttachments] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(textarea.scrollHeight, 144); // 6 lines max
+      textarea.style.height = newHeight + 'px';
+      textarea.style.overflowY = newHeight >= 144 ? 'auto' : 'hidden';
+    }
+  };
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    adjustTextareaHeight();
+  };
 
   const handleSend = () => {
     if (message.trim()) {
@@ -59,92 +77,62 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="bg-theme-input border-t border-theme-border p-4">
+    <div className="w-full bg-theme-input border-t border-theme-border p-4 relative flex-shrink-0">
       {/* Emoji Picker */}
       {showEmojiPicker && (
-        <EmojiPicker
-          onEmojiSelect={handleEmojiSelect}
-          onClose={() => setShowEmojiPicker(false)}
-        />
+        <div className="absolute bottom-full right-4 mb-2 z-50">
+          <EmojiPicker
+            onEmojiSelect={handleEmojiSelect}
+            onClose={() => setShowEmojiPicker(false)}
+          />
+        </div>
       )}
 
-      {/* GIF Picker */}
-      {showGifPicker && (
-        <GifPicker
-          onGifSelect={handleGifSelect}
-          onClose={() => setShowGifPicker(false)}
-        />
-      )}
-
-      <div className="flex items-end space-x-2">
-        {/* Attachment Button */}
-        <div className="relative">
-          <button
-            onClick={() => setShowAttachments(!showAttachments)}
-            className="p-2 rounded-full text-theme-text-secondary hover:text-theme-primary hover:bg-theme-primary/10 transition-colors"
-          >
-            <PlusIcon className="w-6 h-6" />
-          </button>
-          
-          {showAttachments && (
-            <div className="absolute bottom-full left-0 mb-2 bg-theme-nav rounded-lg shadow-lg p-2 flex flex-col space-y-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-theme-primary/10 text-theme-text"
-              >
-                <PhotoIcon className="w-5 h-5" />
-                <span>Photo</span>
-              </button>
-            </div>
-          )}
+      <div className="flex items-end space-x-3">
+        {/* Plus Button with Attachments */}
+        <div className="relative flex-shrink-0">
+          <button>add</button>
         </div>
 
-        {/* Text Input */}
-        <div className="flex-1 relative">
+        {/* Text Input Container */}
+        <div className="flex-1 relative bg-theme-input-field border border-theme-border rounded-3xl min-h-[48px]">
           <textarea
+            ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleMessageChange}
             onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
-            className="w-full bg-theme-input-field border border-theme-border rounded-lg px-4 py-3 pr-24 text-theme-text placeholder-theme-text-secondary resize-none max-h-32 focus:outline-none focus:ring-2 focus:ring-theme-primary"
+            placeholder="Aa"
+            className="w-full bg-transparent px-4 py-3 pr-14 text-theme-text placeholder-theme-text-secondary resize-none min-h-[48px] max-h-[144px] focus:outline-none overflow-y-hidden rounded-3xl"
             rows={1}
           />
           
-          {/* Emoji Button */}
-          <button
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1 rounded text-theme-text-secondary hover:text-theme-primary transition-colors"
-          >
-            <FaceSmileIcon className="w-5 h-5" />
-          </button>
+          {/* Bottom Right Icons */}
+          <div className="absolute bottom-3 right-3">
+            <button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="w-8 h-8 rounded-full hover:bg-theme-primary/10 transition-colors flex items-center justify-center"
+            >
+              <FaceSmileIcon className="w-6 h-6 text-theme-primary" />
+            </button>
+          </div>
         </div>
 
-        {/* Voice/Send Button */}
-        {message.trim() ? (
+        {/* Send Button */}
+        <div className="flex-shrink-0">
           <button
             onClick={handleSend}
-            className="p-3 bg-theme-primary text-white rounded-full hover:bg-theme-primary-dark transition-colors"
+            disabled={!message.trim()}
+            className={`w-12 h-12 rounded-full transition-colors flex items-center justify-center ${
+              message.trim()
+                ? 'bg-theme-primary text-white hover:bg-theme-primary-dark'
+                : 'bg-theme-border text-theme-text-secondary cursor-not-allowed'
+            }`}
           >
-            <PaperAirplaneIcon className="w-5 h-5" />
+            <PaperAirplaneIcon className="w-7 h-7" />
           </button>
-        ) : (
-          <VoiceRecorder
-            onSendVoice={onSendVoice}
-            isRecording={isRecording}
-            onStartRecording={onStartRecording}
-            onStopRecording={onStopRecording}
-          />
-        )}
+        </div>
       </div>
-
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
+      <IOSBottomSheet />
     </div>
   );
 };

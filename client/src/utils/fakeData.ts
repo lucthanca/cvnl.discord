@@ -10,7 +10,7 @@ export const generateFakeMessages = (): Message[] => {
       sender: {
         id: 'user-1',
         name: 'Alice',
-        avatar: 'https://via.placeholder.com/40',
+        avatar: 'https://placehold.co/40',
       },
       isOwn: false,
     },
@@ -22,7 +22,7 @@ export const generateFakeMessages = (): Message[] => {
       sender: {
         id: 'current-user',
         name: 'You',
-        avatar: 'https://via.placeholder.com/40',
+        avatar: 'https://placehold.co/40',
       },
       isOwn: true,
     },
@@ -34,7 +34,7 @@ export const generateFakeMessages = (): Message[] => {
       sender: {
         id: 'user-1',
         name: 'Alice',
-        avatar: 'https://via.placeholder.com/40',
+        avatar: 'https://placehold.co/40',
       },
       isOwn: false,
     },
@@ -46,7 +46,7 @@ export const generateFakeMessages = (): Message[] => {
       sender: {
         id: 'current-user',
         name: 'You',
-        avatar: 'https://via.placeholder.com/40',
+        avatar: 'https://placehold.co/40',
       },
       isOwn: true,
     },
@@ -58,7 +58,7 @@ export const generateFakeMessages = (): Message[] => {
       sender: {
         id: 'user-1',
         name: 'Alice',
-        avatar: 'https://via.placeholder.com/40',
+        avatar: 'https://placehold.co/40',
       },
       isOwn: false,
     },

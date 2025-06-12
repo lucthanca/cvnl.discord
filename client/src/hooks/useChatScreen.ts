@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Message, MessageType } from '../types/chat';
 import { generateFakeMessages } from '../utils/fakeData';
 
@@ -7,7 +7,7 @@ export const useChatScreen = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  const sendMessage = useCallback((content: string, type: MessageType = 'text') => {
+  const sendMessage = (content: string, type: MessageType = 'text') => {
     const newMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -16,7 +16,7 @@ export const useChatScreen = () => {
       sender: {
         id: 'current-user',
         name: 'You',
-        avatar: 'https://via.placeholder.com/40',
+        avatar: 'https://placehold.co/40',
       },
       isOwn: true,
     };
@@ -35,31 +35,31 @@ export const useChatScreen = () => {
         sender: {
           id: 'other-user',
           name: 'Friend',
-          avatar: 'https://via.placeholder.com/40',
+          avatar: 'https://placehold.co/40',
         },
         isOwn: false,
       };
       setMessages(prev => [...prev, responseMessage]);
-    }, 1500);
-  }, []);
+    }, 1000);
+  };
 
-  const sendVoiceMessage = useCallback((audioBlob: Blob) => {
+  const sendVoiceMessage = (audioBlob: Blob) => {
     const audioUrl = URL.createObjectURL(audioBlob);
     sendMessage(audioUrl, 'voice');
-  }, [sendMessage]);
+  };
 
-  const sendImage = useCallback((imageFile: File) => {
+  const sendImage = (imageFile: File) => {
     const imageUrl = URL.createObjectURL(imageFile);
     sendMessage(imageUrl, 'image');
-  }, [sendMessage]);
+  };
 
-  const startRecording = useCallback(() => {
+  const startRecording = () => {
     setIsRecording(true);
-  }, []);
+  };
 
-  const stopRecording = useCallback(() => {
+  const stopRecording = () => {
     setIsRecording(false);
-  }, []);
+  };
 
   return {
     messages,

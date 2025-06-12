@@ -7,7 +7,7 @@ const ChatHeader: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <img
-            src="https://via.placeholder.com/40"
+            src="https://placehold.co/40"
             alt="Chat avatar"
             className="w-10 h-10 rounded-full"
           />

@@ -21,7 +21,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
   ];
 
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-2 bg-theme-nav rounded-lg shadow-lg border border-theme-border p-4 max-h-64 overflow-y-auto">
+    <div className="bg-theme-nav rounded-lg shadow-lg border border-theme-border p-4 max-h-64 overflow-y-auto w-80">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-medium text-theme-text">Emojis</h3>
         <button

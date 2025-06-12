@@ -12,6 +12,7 @@ export interface AuthenticatedClient {
   activeChatId?: string;
   activeEphemeralMessage?: Message;
   activeThread?: ThreadChannel;
+  c4Locked?: boolean; // Indicates if the client is locked for C4
 }
 
 export const clients: Map<string, AuthenticatedClient> = new Map();

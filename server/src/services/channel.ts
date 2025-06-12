@@ -78,7 +78,11 @@ export class ChannelService {
       // Fetch the Discord user to ensure they're in cache
       let discordUser;
       try {
-        discordUser = await client.users.fetch(discordId);
+        if (client.users.cache.has(discordId)) {
+          discordUser = client.users.cache.get(discordId);
+        } else {
+          discordUser = await client.users.fetch(discordId);
+        }
       } catch (userFetchError) {
         console.error(`Failed to fetch Discord user ${discordId}:`, userFetchError);
         // Continue without user-specific permissions
@@ -182,7 +186,7 @@ export class ChannelService {
 
       // Verify channel still exists on Discord
       try {
-        const channel = await client.channels.fetch(channelInfo.channelId);
+        const channel = await this.getChannelById(channelInfo.channelId);
         if (channel && channel.type === ChannelType.GuildText) {
           return channel;
         } else {
@@ -234,7 +238,7 @@ export class ChannelService {
 
       // Try to delete channel from Discord
       try {
-        const channel = await client.channels.fetch(channelInfo.channelId) as TextChannel;
+        const channel = await this.getChannelById(channelInfo.channelId) as TextChannel;
         if (channel) {
           await channel.delete('User logged out');
           console.log(`Deleted Discord channel: ${channelInfo.channelName}`);
@@ -254,6 +258,10 @@ export class ChannelService {
 
   async getChannelById(channelId: string): Promise<Channel | null> {
     try {
+      if (client.channels.cache.has(channelId)) {
+        const channel = client.channels.cache.get(channelId) || null;
+        if (channel) return channel;
+      }
       return await client.channels.fetch(channelId);
     } catch (error) {
       console.error('Failed to fetch channel:', error);
@@ -287,7 +295,7 @@ export class ChannelService {
     if (!channelInfo) {
       throw new ChannelNotFoundError(`No channel found for user ${discordId}`);
     }
-    const channel = await client.channels.fetch(channelInfo.channelId) as TextChannel;
+    const channel = await this.getChannelById(channelInfo.channelId) as TextChannel;
     if (!channel || channel.type !== ChannelType.GuildText) {
       throw new InvalidChannelTypeError('Invalid channel type for creating thread');
     }

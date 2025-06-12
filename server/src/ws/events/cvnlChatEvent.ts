@@ -125,7 +125,7 @@ const c1: EventHandler = async (client, data: any) => {
       }]
     });
     // Add discord user to the thread
-    let discordUser = await client.activeThread.guild.members.cache.get(client.discordId);
+    let discordUser = client.activeThread.guild.members.cache.get(client.discordId);
     if (!discordUser) {
       console.warn(`Discord user ${client.discordId} not found in guild ${client.activeThread.guild.id}`);
     } else {
@@ -212,6 +212,10 @@ const c2: EventHandler = async (client, data: C2EventData) => {
       //   }
       // }]
     });
+    if (client.c4Locked) {
+      // release c4 lock if it was locked when the message was sent
+      client.c4Locked = false;
+    }
 
     await dbService.getResource().threadMessage.create({
       data: {
@@ -351,6 +355,7 @@ const c17: EventHandler = async (client, data) => {
   c17Locked = false;
 };
 const c4: EventHandler = async (client) => {
+  if (client.c4Locked) return;
   // This event is triggered when the stranger is typing
   const chatId = client.activeChatId;
   const activeThread = client.activeThread;
@@ -358,8 +363,14 @@ const c4: EventHandler = async (client) => {
     console.warn(`No active chat for client ${client.user.cvnlUserId}, cannot handle C4 event`);
     return;
   }
-  console.log(`🔔 CVNL Chat Event: c4 (stranger typing) for user ${client.user.cvnlUserId} with chat ID: ${chatId}`)
+  console.log(`🔔 CVNL Chat Event: c4 (stranger typing) for user ${client.user.cvnlUserId} with chat ID: ${chatId}`);
   await activeThread.sendTyping();
+  // Lock c4 for at least 10 seconds to prevent spamming, and auto release after 10 seconds
+  client.c4Locked = true;
+  setTimeout(() => {
+    client.c4Locked = false;
+    console.log(`🔓 C4 lock released for user ${client.user.cvnlUserId}`);
+  }, 10000);
 }
 const c20: EventHandler = async (client, data) => {
   // This event is triggered when the stranger reactions to a message
@@ -384,7 +395,11 @@ const c20: EventHandler = async (client, data) => {
   try {
     const msg = await dbService.getResource().threadMessage.findUnique({ where: { cvnlMsgId: messageId } });
     if (!msg) return;
-    const discordMsg = await activeThread.messages.fetch(msg.discordMsgId);
+    let discordMsg = activeThread.messages.cache.get(msg.discordMsgId);
+    if (!discordMsg) {
+      discordMsg = await activeThread.messages.fetch(msg.discordMsgId);
+    }
+    
     if (!discordMsg) return;
     await discordMsg.react(reactionIcon);
   } catch (error) {

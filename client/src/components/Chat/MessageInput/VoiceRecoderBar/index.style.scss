@@ -1,0 +1,15 @@
+.voice-recorder-bar {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    --tw-bg-opacity: 1;
+    background-color: rgb(79 70 229 / var(--tw-bg-opacity, 1));
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--voice-recorder-bar-width, "0%");
+    height: 100%;
+    z-index: 0;
+  }
+}

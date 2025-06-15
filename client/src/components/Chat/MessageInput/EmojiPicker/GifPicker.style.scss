@@ -1,0 +1,75 @@
+:root {
+  --shadow-border: 0 0 0 1px hsl(none 0% 100%/0.08);
+  --shadow-low: 0 1px 4px 0 hsl(none 0% 0%/0.14);
+  --bg-mod-strong: color-mix(in oklab,hsl(240 calc(1*4%) 60.784% /0.2) 100%,hsl(0 0% 0% /0.2) 0%);
+  --bg-mod-subtle: color-mix(in oklab,hsl(240 calc(1*4%) 60.784% /0.0784313725490196) 100%,hsl(0 0% 0% /0.0784313725490196) 0%);
+}
+.my-masonry-grid {
+  display: -webkit-box; /* Not needed if autoprefixing */
+  display: -ms-flexbox; /* Not needed if autoprefixing */
+  display: flex;
+  //margin-left: -1rem; /* gutter size offset */
+  width: auto;
+  gap: 1rem; /* gutter size */
+}
+.my-masonry-grid_column {
+  //padding-left: 1rem; /* gutter size */
+  background-clip: padding-box;
+}
+
+/* Style your items */
+.my-masonry-grid_column > div { /* change div to reference your elements you put in <Masonry> */
+  background: grey;
+  margin-bottom: 1rem;
+}
+.gif-category__item {
+  --border-strong: color-mix(in oklab,hsl(240 calc(1*4%) 60.784% /0.4392156862745098) 100%,hsl(0 0% 0% /0.4392156862745098) 0%);
+  .__overlay {
+    transition: backdrop-filter .15s ease-out,-webkit-backdrop-filter .15s ease-out;
+    @apply rounded-lg;
+    &:hover {
+      -webkit-backdrop-filter: brightness(60%) blur(4px);
+      backdrop-filter: brightness(60%) blur(4px);
+      border: 1px solid var(--border-strong);
+    }
+  }
+}
+
+.gif__item {
+  position: relative;
+  transition: box-shadow .15s ease-out,-webkit-backdrop-filter .15s ease-out;
+  &::after {
+    border-radius: 7px;
+    bottom: -1px;
+    content: "";
+    display: block;
+    left: -1px;
+    pointer-events: none;
+    position: absolute;
+    right: -1px;
+    top: -1px;
+    transition: background .15s ease-out;
+    transition-property: box-shadow, background;
+  }
+  &:hover {
+    box-shadow: var(--shadow-border),var(--shadow-low);
+    &::after {
+      background: linear-gradient(to bottom,var(--bg-mod-strong),var(--bg-mod-subtle));
+    }
+  }
+}
+
+// custom scrollbar for gif-category__grid, make it more thin
+.gif-category__grid,.gif__grid {
+  &::-webkit-scrollbar-track {
+    background: #f5f5f5;
+  }
+  &::-webkit-scrollbar {
+    width: 2px;
+  }
+  &::-webkit-scrollbar-thumb {
+     background: #f2f2f2;
+     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+     border-radius: 2px;
+   }
+}

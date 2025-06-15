@@ -1,9 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { PaperAirplaneIcon, PhotoIcon, FaceSmileIcon, MicrophoneIcon, PlusIcon } from '@heroicons/react/24/outline';
-import EmojiPicker from '../EmojiPicker/EmojiPicker';
 import IOSBottomSheet from "../BottomSheet/index.js";
 import GifPicker from '../GifPicker/GifPicker';
 import VoiceRecorder from '../VoiceRecorder/VoiceRecorder';
+import Microphone from '~/assets/microphone';
+import GalleryIcon from '~/assets/gallery';
+import "./MessageInput.style.scss";
+import Attachment from '~/components/Chat/MessageInput/Attachment';
+import EmojiPicker from '~/components/Chat/MessageInput/EmojiPicker';
+import Close from '~/assets/close.js';
+import VoiceRecorderBar from '~/components/Chat/MessageInput/VoiceRecoderBar';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => void;
@@ -26,7 +32,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showAttachments, setShowAttachments] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea
@@ -76,8 +81,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setShowGifPicker(false);
   };
 
+  const [selectedImgs, setSelectedImgs] = useState<File[]>([]);
+
+  const renderPhotoPreview = (files: File[]) => {
+    setSelectedImgs(files);
+  };
+
   return (
-    <div className="w-full bg-theme-input border-t border-theme-border p-4 relative flex-shrink-0">
+    <div className="w-full bg-theme-input border-t border-theme-border p-3 relative flex-shrink-0">
       {/* Emoji Picker */}
       {showEmojiPicker && (
         <div className="absolute bottom-full right-4 mb-2 z-50">
@@ -88,33 +99,52 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
 
-      <div className="flex items-end space-x-3">
-        {/* Plus Button with Attachments */}
-        <div className="relative flex-shrink-0">
-          <button>add</button>
-        </div>
+      <div className="flex items-center gap-2">
+        <Attachment onPhotoSelected={renderPhotoPreview} />
 
         {/* Text Input Container */}
-        <div className="flex-1 relative bg-theme-input-field border border-theme-border rounded-3xl min-h-[48px]">
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={handleMessageChange}
-            onKeyPress={handleKeyPress}
-            placeholder="Aa"
-            className="w-full bg-transparent px-4 py-3 pr-14 text-theme-text placeholder-theme-text-secondary resize-none min-h-[48px] max-h-[144px] focus:outline-none overflow-y-hidden rounded-3xl"
-            rows={1}
-          />
-          
-          {/* Bottom Right Icons */}
-          <div className="absolute bottom-3 right-3">
-            <button
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="w-8 h-8 rounded-full hover:bg-theme-primary/10 transition-colors flex items-center justify-center"
-            >
-              <FaceSmileIcon className="w-6 h-6 text-theme-primary" />
-            </button>
+        <div className="msgTxt__container flex-1 relative bg-theme-input-field border border-theme-border rounded-3xl">
+          <VoiceRecorderBar />
+          {/* Preview image */}
+          {false && (
+            <>
+            {selectedImgs.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto p-2">
+              {selectedImgs.map((img, index) => (
+                <div key={index} className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                  <img
+                    src={URL.createObjectURL(img)}
+                    alt={`Preview ${index}`}
+                    className="w-full h-full object-contain"
+                  />
+                  <button
+                    className="p-0 bg-transparent absolute top-0 right-0 text-slate-800 rounded-full"
+                    onClick={() => setSelectedImgs(prev => prev.filter((_, i) => i !== index))}
+                  >
+                    <Close width='1rem' height="1rem" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="__wrapper flex w-full h-full items-center pr-[5.875px]">
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={handleMessageChange}
+              onKeyPress={handleKeyPress}
+              placeholder="Aa"
+              className="w-full bg-transparent pl-4 pr-2 py-2 text-theme-text placeholder-theme-text-secondary resize-none focus:outline-none self-center"
+              rows={1}
+            />
+
+            {/* Bottom Right Icons */}
+            <div className="mb-[5.875px] self-end flex-shrink-0">
+              <EmojiPicker />
+            </div>
           </div>
+            </>
+          )}
         </div>
 
         {/* Send Button */}
@@ -122,13 +152,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <button
             onClick={handleSend}
             disabled={!message.trim()}
-            className={`w-12 h-12 rounded-full transition-colors flex items-center justify-center ${
-              message.trim()
-                ? 'bg-theme-primary text-white hover:bg-theme-primary-dark'
-                : 'bg-theme-border text-theme-text-secondary cursor-not-allowed'
+            className={`p-2 bg-transparent rounded-full aspect-square transition-colors flex items-center justify-center hover:bg-gray-200 ${
+              message.trim() ? 'text-blue-500' : 'text-theme-text-secondary cursor-not-allowed'
             }`}
           >
-            <PaperAirplaneIcon className="w-7 h-7" />
+            <svg viewBox="0 0 12 13" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <g fillRule="evenodd" transform="translate(-450 -1073)">
+                <path d="m458.371 1079.75-6.633.375a.243.243 0 0 0-.22.17l-.964 3.255c-.13.418-.024.886.305 1.175a1.08 1.08 0 0 0 1.205.158l8.836-4.413c.428-.214.669-.677.583-1.167-.06-.346-.303-.633-.617-.79l-8.802-4.396a1.073 1.073 0 0 0-1.183.14c-.345.288-.458.77-.325 1.198l.963 3.25c.03.097.118.165.22.17l6.632.375s.254 0 .254.25-.254.25-.254.25"></path>
+              </g>
+            </svg>
           </button>
         </div>
       </div>

@@ -1,0 +1,17 @@
+:root {
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+  --shadow-1: rgba(0,0,0,.1);
+  --shadow-2: rgba(0,0,0,.2);
+  --menu-item-base-overlay-radius: 4px;
+}
+.dialog__content {
+  border-radius: 12px 12px 12px 0;
+  box-shadow: 0 12px 28px 0 var(--shadow-2), 0 2px 4px 0 var(--shadow-1);
+}
+.dialog__item {
+  @apply cursor-pointer;
+  border-radius: var(--menu-item-base-overlay-radius);
+  &:hover {
+    background-color: var(--hover-overlay);
+  }
+}

@@ -1,0 +1,15 @@
+.emojiPicker__nav {
+  .__indicator {
+    transform-origin: revert!important;
+    &:not([data-tab-id]) {
+      display: none;
+    }
+    &[data-tab-id="gif"] {
+      transform: translateX(.25rem) translateY(-50%) !important;
+    }
+    &[data-tab-id="emoji"] {
+      transform: translateX(calc(100% + .25rem)) translateY(-50%) !important;
+    }
+    transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+}

@@ -19,3 +19,6 @@ ij_wrap_on_typing = false
 [{*.cjs,*.es6,*.js,*.mjs,*.ts,*.json,*.jsx,*.tsx}]
 indent_size = 2
 tab_width = 2
+
+[{*.css,*.scss,*.less,*.html,*.md,*.yaml,*.yml}]
+indent_size = 2

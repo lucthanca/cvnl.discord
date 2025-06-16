@@ -15,6 +15,7 @@
     "emoji-mart": "^5.6.0",
     "framer-motion": "^12.17.3",
     "idb": "^8.0.3",
+    "inline-worker": "^1.1.0",
     "lodash": "^4.17.21",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

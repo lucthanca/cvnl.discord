@@ -1,15 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { PaperAirplaneIcon, PhotoIcon, FaceSmileIcon, MicrophoneIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PaperAirplaneIcon, PhotoIcon, FaceSmileIcon, MicrophoneIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import IOSBottomSheet from "../BottomSheet/index.js";
 import GifPicker from '../GifPicker/GifPicker';
-import VoiceRecorder from '../VoiceRecorder/VoiceRecorder';
+// import VoiceRecorder from '../VoiceRecorder/VoiceRecorder';
 import Microphone from '~/assets/microphone';
 import GalleryIcon from '~/assets/gallery';
 import "./MessageInput.style.scss";
 import Attachment from '~/components/Chat/MessageInput/Attachment';
 import EmojiPicker from '~/components/Chat/MessageInput/EmojiPicker';
 import Close from '~/assets/close.js';
-import VoiceRecorderBar from '~/components/Chat/MessageInput/VoiceRecoderBar';
+import VoiceRecorderBar, { VoiceRecorder } from '~/components/Chat/MessageInput/VoiceRecoderBar';
+import { set } from 'lodash';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => void;
@@ -87,6 +88,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setSelectedImgs(files);
   };
 
+  const [showCloseButon, setShowCloseButton] = useState(false);
+
+  const showButtonClose = () => {
+    setShowCloseButton(true);
+  }
+
+  const voiceRecorderRef = useRef<VoiceRecorder | null>(null);
+  const handleCloseButton = () => {
+    voiceRecorderRef.current?.clear(() => {
+      setShowCloseButton(false);
+    });
+  }
+
   return (
     <div className="w-full bg-theme-input border-t border-theme-border p-3 relative flex-shrink-0">
       {/* Emoji Picker */}
@@ -100,11 +114,18 @@ const MessageInput: React.FC<MessageInputProps> = ({
       )}
 
       <div className="flex items-center gap-2">
-        <Attachment onPhotoSelected={renderPhotoPreview} />
+        {showCloseButon && (
+          <div className="flex">
+            <button className='w-[30px] h-[30px] border border-gray-200 p-0 rounded-full' onClick={handleCloseButton}>
+              <XMarkIcon  />
+            </button>
+          </div>
+        )}
+        {!showCloseButon && (<Attachment onPhotoSelected={renderPhotoPreview} />)}
 
         {/* Text Input Container */}
         <div className="msgTxt__container flex-1 relative bg-theme-input-field border border-theme-border rounded-3xl">
-          <VoiceRecorderBar />
+          <VoiceRecorderBar onStart={showButtonClose} ref={voiceRecorderRef} />
           {/* Preview image */}
           {false && (
             <>

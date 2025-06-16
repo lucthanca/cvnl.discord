@@ -7,11 +7,15 @@ const VoiceRecorderBar = (props: {
   onComplete?: () => void;
 }) => {
   const recorderBarRef = useRef<HTMLDivElement>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement>(null);
   const { onComplete } = props;
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const [audio, setAudio] = useState<{ blob: Blob; url: string } | null>(null);
   const handleRecordingComplete = () => {
+    handleStopRecording();
+    recorderBarRef.current!.style.setProperty('--voice-recorder-bar-width', `100%`);
     onComplete?.();
   }
   const cancelRecording = (): void => {
@@ -32,6 +36,26 @@ const VoiceRecorderBar = (props: {
     }
     setIsRecording(false);
   };
+
+  const handlePlayAudio = () => {
+    if (audioPlayerRef.current) {
+      const playing = () => {
+        const currentTime = audioPlayerRef.current!.currentTime;
+        const duration = audioPlayerRef.current!.duration;
+        const percent = (currentTime / duration) * 100;
+        recorderBarRef.current!.style.setProperty('--voice-recorder-bar-width', `${percent}%`);
+        document.querySelector(".voice-recorder-bar__timer")!.textContent = `${Math.floor(currentTime / 60)}:${Math.floor(currentTime % 60).toString().padStart(2, "0")}`;
+
+        if (!audioPlayerRef.current!.paused && !audioPlayerRef.current!.ended) {
+          requestAnimationFrame(playing);
+        }
+      }
+      audioPlayerRef.current.addEventListener('play', () => requestAnimationFrame(playing));
+      audioPlayerRef.current.play();
+      return;
+    }
+    alert('Không thể phát âm thanh, vui lòng thử lại sau.');
+  }
   const handleStartRecording = () => {
     (async () => {
       const stream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -46,15 +70,10 @@ const VoiceRecorderBar = (props: {
 
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        
-        if (onRecordingComplete) {
-          onRecordingComplete({
-            blob: audioBlob,
-            url: audioUrl,
-            duration: duration
-          });
-        }
+        setAudio({
+          blob: audioBlob,
+          url: URL.createObjectURL(audioBlob),
+        });
         
         // Dọn dẹp stream
         stream.getTracks().forEach(track => track.stop());
@@ -77,7 +96,7 @@ const VoiceRecorderBar = (props: {
 
         document.querySelector(".voice-recorder-bar__timer")!.textContent = timerText;
 
-        if (elapsed < DURATION || mediaRecorder.state === 'recording') {
+        if (elapsed < DURATION && mediaRecorder.state === 'recording') {
           requestAnimationFrame(tick);
         } else {
           handleRecordingComplete();
@@ -94,9 +113,14 @@ const VoiceRecorderBar = (props: {
       {isRecording && (<div className="voice-recorder-bar__button-stop mx-2 cursor-pointer group transition-colors inline-flex relative z-10" onClick={handleStopRecording}>
         <StopIcon width="20px" height="20px" className="text-white group-hover:text-gray-200" />
       </div>)}
-      {!isRecording && (<div className="voice-recorder-bar__button-play mx-2 cursor-pointer group transition-colors inline-flex relative z-10" onClick={() => setIsRecording(true)}>
+      {(!isRecording && audio) && (<div className="voice-recorder-bar__button-play mx-2 cursor-pointer group transition-colors inline-flex relative z-10" onClick={handlePlayAudio}>
         <PlayIcon width="20px" height="20px" className="text-white group-hover:text-gray-200" />
+        <audio className="voice-recorder-bar__audio-player mx-2 relative z-10" controls={false} ref={audioPlayerRef}>
+          <source src={audio.url} type="audio/wav" />
+          Your browser does not support the audio element.
+        </audio>
       </div>)}
+
       <div className="voice-recorder-bar__timer text-indigo-400 text-sm rounded-full px-2 mx-2 bg-white relative z-10 justify-self-end">
         0:00
       </div>

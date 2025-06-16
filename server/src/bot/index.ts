@@ -79,6 +79,8 @@ class DiscordBot
     });
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
+      // check if is system message => ignore
+      if (message.system) return;
       if (message.channel.isThread()) {
         const chatThread = await channelService.getUserChatThreadByThreadId(message.channel.id);
         if (!chatThread) {

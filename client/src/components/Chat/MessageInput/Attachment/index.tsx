@@ -1,5 +1,4 @@
-import { MicrophoneIcon, PhotoIcon } from '@heroicons/react/24/outline/index.js';
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Microphone from '~/assets/microphone.js';
 import GalleryIcon from '~/assets/gallery.js';
 import SimpleDialog, { Option } from '~/components/SimpleDialog';
@@ -35,10 +34,11 @@ const Options = (props: {
 
 type Props = {
   onPhotoSelected?: (files: File[]) => void;
+  onVoiceRecordingClick?: () => void;
 }
 export default (props: Props) => {
-  const { onPhotoSelected } = props;
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const { onPhotoSelected, onVoiceRecordingClick } = props;
+  const [isCollapsed] = useState(true);
   const moreOptionsRef = useRef<HTMLDivElement>(null);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const { fileInputRef } = useAttachment();
@@ -49,10 +49,18 @@ export default (props: Props) => {
     }
     setShowMoreOptions(false);
   };
+  const handleClickRecordingVoice = () => {
+    setShowMoreOptions(false);
+    onVoiceRecordingClick?.();
+  };
   const [options] = useState<Option[]>([
     { label: "Gửi ảnh", icon: <GalleryIcon />, onClick: handleClickUploadImage },
-    { label: "Ghi âm", icon: <Microphone /> },
+    { label: "Ghi âm", icon: <Microphone />, onClick: handleClickRecordingVoice },
   ]);
+
+  const handleToggleShowOptions = () => {
+    setShowMoreOptions(prev => !prev);
+  }
 
   return (
     <>
@@ -60,7 +68,7 @@ export default (props: Props) => {
         <div
           className="flex-shrink-0 mx-[-2px]"
           ref={moreOptionsRef}
-          onClick={() => setShowMoreOptions(prev => !prev)}>
+          onClick={handleToggleShowOptions}>
           <button className="bg-transparent p-2">
             <PlusIcon />
           </button>

@@ -100,6 +100,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       setShowCloseButton(false);
     });
   }
+  console.log('RENDER MESSAGE INPUT');
 
   return (
     <div className="w-full bg-theme-input border-t border-theme-border p-3 relative flex-shrink-0">
@@ -107,8 +108,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       {showEmojiPicker && (
         <div className="absolute bottom-full right-4 mb-2 z-50">
           <EmojiPicker
-            onEmojiSelect={handleEmojiSelect}
-            onClose={() => setShowEmojiPicker(false)}
+            // onEmojiSelect={handleEmojiSelect}
+            // onClose={() => setShowEmojiPicker(false)}
           />
         </div>
       )}
@@ -121,13 +122,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </button>
           </div>
         )}
-        {!showCloseButon && (<Attachment onPhotoSelected={renderPhotoPreview} />)}
+        {!showCloseButon && (<Attachment onPhotoSelected={renderPhotoPreview} onVoiceRecordingClick={() => voiceRecorderRef.current?.recordVoice()} />)}
 
         {/* Text Input Container */}
         <div className="msgTxt__container flex-1 relative bg-theme-input-field border border-theme-border rounded-3xl">
           <VoiceRecorderBar onStart={showButtonClose} ref={voiceRecorderRef} />
           {/* Preview image */}
-          {false && (
+          {!showCloseButon && (
             <>
             {selectedImgs.length > 0 && (
             <div className="flex gap-2 overflow-x-auto p-2">

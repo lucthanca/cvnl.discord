@@ -272,7 +272,7 @@ export class ChannelService {
   private async createDiscordThread(channel: TextChannel, chatId: string) {
     return await channel.threads.create({
       name: getThreadName(chatId),
-      autoArchiveDuration: 4320, // 24 hours
+      autoArchiveDuration: 10080, // 1 week
       type: ChannelType.PrivateThread,
       reason: `New CVNL chat session: ${chatId}`,
     });

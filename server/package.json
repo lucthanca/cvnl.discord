@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc && tsc-alias",
     "tsc:config": "tsc --showConfig",
-    "start": "tsc && tsc-alias && node dist/index.js",
+    "start": "node dist/index.js",
     "dev": "tsc --watch & node --watch dist/index.js",
     "dev:build": "tsc && node --watch dist/index.js",
     "dev:env": "node -r dotenv/config dist/index.js",

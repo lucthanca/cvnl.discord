@@ -15,7 +15,6 @@ export const baseManifest = {
 
 export const baseBuildOptions: BuildOptions = {
   sourcemap: isDev,
-  emptyOutDir: !isDev
 }
 
 const baseConfig = defineConfig({
@@ -48,7 +47,7 @@ export default mergeConfig(
       ...baseBuildOptions,
       outDir,
       emptyOutDir: true,
-      minify: 'terser',
+      minify: 'esbuild',
     },
   })
 )

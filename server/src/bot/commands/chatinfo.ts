@@ -35,17 +35,17 @@ export default {
   handle: async (interaction: ChatInputCommandInteraction): Promise<void> => {
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const oauthUser = await dbService.getResource().oAuthSession.findUnique({
-        where: {
-          discordId: interaction.user.id,
-        }
-      });
-      if (!oauthUser) {
-        await interaction.editReply({
-          content: '❌ Tài khoản Discord chưa được liên kết.',
-        });
-        return;
-      }
+      // const oauthUser = await dbService.getResource().oAuthSession.findUnique({
+      //   where: {
+      //     discordId: interaction.user.id,
+      //   }
+      // });
+      // if (!oauthUser) {
+      //   await interaction.editReply({
+      //     content: '❌ Tài khoản Discord chưa được liên kết.',
+      //   });
+      //   return;
+      // }
 
       const discordId = interaction.user.id;
       const channelId = interaction.channelId;

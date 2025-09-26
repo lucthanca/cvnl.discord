@@ -483,6 +483,18 @@ class DatabaseService {
     }
   }
 
+  async getMessagesByIds(ids: string[]) {
+    const records = await this.prisma.threadMessage.findMany({
+      where: {
+        cvnlMsgId: {
+          in: ids,
+        },
+      },
+      select: { cvnlMsgId: true },
+    });
+    return records.map(row => row.cvnlMsgId);
+  }
+
   public getResource(): PrismaClient {
     return this.prisma;
   }

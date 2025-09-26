@@ -44,12 +44,23 @@ export interface ChatInfoResponse {
   status: ChatInfoStatus;
   error_message?: string;
 }
+export type CVNLMessage = {
+  id: string;
+  status: 'delivered' | 'sent';
+  content: string;
+  from: 'stranger' | 'me';
+  createdAt: string;
+  replyId?: string;
+  replyPreview?: string;
+  replySelf?: boolean;
+};
 export type CVNLChatInfo = {
   chatId: string;
   status: ChatDataStatus;
   partnerGender: string;
   partnerJob: string;
   createdAt: string;
+  messages: CVNLMessage[];
 };
 
 export interface CVNLVerifyResponse {
@@ -141,7 +152,8 @@ export class CVNLApiService {
           status: data.data.chat.status,
           partnerGender: this.getGenderName(data.data.chat.stranger.gender),
           partnerJob: this.getJobName(data.data.chat.stranger.job),
-          createdAt: data.data.chat.createdAt
+          createdAt: data.data.chat.createdAt,
+          messages: data.data.chat.messages,
         };
       } else {
         return {
@@ -149,11 +161,10 @@ export class CVNLApiService {
           chatId: '',
           partnerGender: '',
           partnerJob: '',
-          createdAt: ''
+          createdAt: '',
+          messages: [],
         }
       }
-
-      return null;
     } catch (error) {
       console.error('Error getting user active chat info:', error);
       return null;

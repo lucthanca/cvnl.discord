@@ -1,7 +1,8 @@
-import { Guild, TextChannel, ChannelType, PermissionFlagsBits, ThreadChannel, Channel } from 'discord.js';
+import { Guild, TextChannel, ChannelType, PermissionFlagsBits, ThreadChannel, Channel, ReplyOptions } from 'discord.js';
 import dbService from './database.js';
 import { getThreadName, sanitizeChannelName } from '../utils/channelUtils.js';
 import { client } from "../bot/index.js";
+import { CVNLMessage } from '~/services/api.js';
 
 export const THREAD_CHAT_STATUS_ACTIVE = 0;
 export const THREAD_CHAT_STATUS_ARCHIVED = 1;
@@ -423,6 +424,37 @@ export class ChannelService {
     } catch (error) {
       console.error(`Error getting/creating channel for Discord ${discordId} / CVNL ${cvnlUserId}:`, error);
       return null;
+    }
+  }
+
+  async syncMessages(threadChannel: ThreadChannel, msgs: CVNLMessage[]) {
+    const ids = msgs.map(m => m.id);
+    const existing = await dbService.getMessagesByIds(ids);
+    const newMessages = msgs.filter(m => !existing.includes(m.id));
+
+    for (const msg of newMessages) {
+      const content = msg.content;
+      let reply: ReplyOptions | undefined = undefined;
+      if (msg.replyId) {
+        const threadMessage = await dbService.getResource().threadMessage.findUnique({
+          where: { cvnlMsgId: msg.replyId },
+        });
+        if (threadMessage) {
+          reply = { messageReference: threadMessage.discordMsgId };
+        }
+      }
+      // send discord message
+      const discordMsg = await threadChannel.send({
+        content,
+        reply,
+      });
+      await dbService.getResource().threadMessage.create({
+        data: {
+          threadId: threadChannel.id,
+          discordMsgId: discordMsg.id,
+          cvnlMsgId: msg.id,
+        },
+      });
     }
   }
 }

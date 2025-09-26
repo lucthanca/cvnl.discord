@@ -43,6 +43,7 @@ const restoreThreadChat = async (client: AuthenticatedClient) => {
       }]
     });
   } else if (channel.is_new) {
+    console.log('DEBUG: Cuộc trò chuyện mới, gửi tin nhắn chào mừng');
     channel.send({
       embeds: [{
         title: '🌟 Cuộc trò chuyện mới bắt đầu',
@@ -65,6 +66,14 @@ const restoreThreadChat = async (client: AuthenticatedClient) => {
   } else {
     console.log(`🔄 Cuộc trò chuyện đã tồn tại, không cần khôi phục: ${client.activeChatId}`);
   }
+
+  // get last 10 message sent by stranger
+  const lastMessages = activeChatInfo.messages
+    .filter(msg => msg.from === 'stranger')
+    .slice(-10);
+  if (lastMessages.length === 0) return;
+  // sync last messages to discord and db
+  void channelService.syncMessages(client.activeThread, lastMessages);
 }
 
 const enqueuedAuthClients = {} as {[socketId: string]: boolean};
@@ -134,5 +143,5 @@ export default async function onAuth(socket: Socket, data: AuthMessage) {
     cvnlUserName: user.cvnlUserName,
     socketId: socket.id
   });
-  restoreThreadChat(authenticatedClient).then(() => {});
+  void restoreThreadChat(authenticatedClient);
 }

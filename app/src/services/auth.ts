@@ -10,7 +10,7 @@ export interface DiscordUser {
 export const authenticateWithDiscord = async (): Promise<DiscordUser> => {
   return new Promise((resolve, reject) => {
     try {
-      const clientId = "1380138485293256808";
+      const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
       const redirectUri = chrome.identity.getRedirectURL();
       const scope = "identify";
 

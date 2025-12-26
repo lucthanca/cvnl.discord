@@ -1,4 +1,4 @@
-import * as io from 'socket.io-client';
+import { SERVER_URL } from "@src/constants";
 
 export interface DiscordUser {
   id: string;
@@ -56,7 +56,7 @@ export const authenticateWithDiscord = async (): Promise<DiscordUser> => {
 
             // Exchange code for token via backend
             const tokenResponse = await fetch(
-              "http://localhost:3000/api/discord/oauth/token",
+              `${SERVER_URL}/api/discord/oauth/token`,
               {
                 method: "POST",
                 headers: {

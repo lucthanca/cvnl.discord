@@ -1,6 +1,7 @@
 import * as io from 'socket.io-client';
 import { EVENT_DISCORD_START_CHAT, EVENT_DISCORD_END_CHAT, EVENT_CVNL_CHAT_EVENT,EVENT_CVNL_NEW_MESSAGE_FROM_DISCORD } from '../../server/src/shared/constants';
 import type { MessageFromDiscord } from '../../server/src/shared/constants';
+import { SERVER_URL } from './constants';
 
 interface TokenData {
   id: string;
@@ -309,7 +310,6 @@ class CVNLManager {
     if (!this.discordUser) return;
 
     try {
-      const SERVER_URL = 'http://localhost:3000';
       const response = await fetch(`${SERVER_URL}/api/discord/tokens/${this.discordUser.id}`);
       
       if (response.ok) {

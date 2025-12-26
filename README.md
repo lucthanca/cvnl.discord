@@ -143,10 +143,133 @@ cd ../client && npm install
 
 ### Khởi động Server
 
+#### Cách 1: Chạy trực tiếp (Development)
 ```bash
 cd server
 npm run dev
 ```
+
+#### Cách 2: Sử dụng start script (WSL/Linux)
+```bash
+# Từ root project
+./start-server.sh
+```
+
+Script sẽ:
+- ✅ Kiểm tra và cleanup process cũ nếu port bị chiếm
+- ✅ Chạy server với WSL Node.js
+- ✅ Detach process khỏi terminal (dùng setsid)
+- ✅ Đợi cả 2 ports (3000 và 3001) listen
+- ✅ Lưu PID vào `server.pid`
+- ✅ Ghi logs vào `logs/server.log`
+
+**Kiểm tra trạng thái:**
+```bash
+# Check PID
+cat server.pid
+
+# Check process
+ps -p $(cat server.pid)
+
+# Check ports
+ss -tuln | grep -E ":(3000|3001)"
+
+# Tail logs
+tail -f logs/server.log
+```
+
+**Dừng server:**
+```bash
+# Kill process
+kill $(cat server.pid)
+
+# Hoặc force kill
+kill -9 $(cat server.pid)
+```
+
+#### Cách 3: Windows với Task Scheduler (Auto-start khi boot)
+
+**Bước 1: Copy scripts vào C:\scripts**
+```powershell
+# Từ thư mục scripts/ trong project, copy các file sau vào C:\scripts\:
+- cvnl-discord-simple.ps1        # Main startup script
+- register-cvnl-service-simple.ps1  # Install service
+- unregister-cvnl-service.ps1    # Uninstall service  
+- check-cvnl-status.ps1          # Status checker
+```
+
+**Bước 2: Đăng ký Windows Task Scheduler**
+```powershell
+# Mở PowerShell với quyền Administrator
+cd C:\scripts
+.\register-cvnl-service-simple.ps1
+```
+
+Task sẽ:
+- ✅ Tự động chạy khi Windows khởi động
+- ✅ Tự động chạy khi user login
+- ✅ Auto restart nếu fail (3 lần)
+- ✅ Chạy ẩn (hidden window)
+- ✅ Ghi logs vào `C:\scripts\cvnl-simple.log`
+
+**Quản lý service:**
+```powershell
+# Kiểm tra trạng thái
+.\check-cvnl-status.ps1
+
+# Start service manually
+Start-ScheduledTask -TaskName "CVNL Discord Service"
+
+# Stop service (kill WSL process)
+wsl -d Debian -- bash -c 'kill $(cat /mnt/u/projects/cvnl.discord/server.pid)'
+
+# Disable task
+Disable-ScheduledTask -TaskName "CVNL Discord Service"
+
+# Enable task
+Enable-ScheduledTask -TaskName "CVNL Discord Service"
+
+# Gỡ bỏ service
+.\unregister-cvnl-service.ps1
+
+# Xem logs
+Get-Content C:\scripts\cvnl-simple.log -Tail 30
+
+# Hoặc mở Task Scheduler GUI
+Win + R → gõ: taskschd.msc
+```
+
+**Output từ check-cvnl-status.ps1:**
+```
+========================================
+  CVNL Discord Service Status Check
+========================================
+
+[1] Task Scheduler Status:
+   Task exists: YES
+   State: Ready (Enabled, not running)
+   Last Run: 11/10/2025 1:30:00 PM
+   Last Result: Success (0)
+
+[2] WSL Process Status:
+   Status: RUNNING
+   PID: 12345
+   Command: /home/user/.nvm/versions/node/v20.19.2/bin/node dist/index.js
+
+[3] Port Status:
+   - Port 3000 (HTTP): LISTENING
+   - Port 3001 (WebSocket): LISTENING
+
+========================================
+  Overall Status: HEALTHY
+========================================
+```
+
+**Lưu ý Windows:**
+- Task chạy với user account hiện tại
+- Yêu cầu WSL Debian distribution đã cài đặt
+- Script sẽ tự động start WSL khi Windows boot
+- Logs được lưu tại `C:\scripts\cvnl-simple.log`
 
 Điều này sẽ khởi động:
 - **Discord Bot** - Kết nối đến Discord API

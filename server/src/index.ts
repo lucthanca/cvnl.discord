@@ -31,8 +31,18 @@ async function main() {
     const app = express();
     const port = parseInt(process.env.PORT || '3000');
 
-    app.use(cors());
+    app.use(cors({
+      origin: 'https://cvnl.app',
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true,
+    }));
     app.use(express.json());
+    app.use((req, res, next) => {
+      res.setHeader('Access-Control-Allow-Private-Network', "true");
+      next();
+    });
+    app.options("*", cors());
 
     // Add Discord OAuth routes
     app.use('/api/discord', discordRoutes);
@@ -59,8 +69,9 @@ async function main() {
       });
     });
 
-    app.listen(port, () => {
-      console.log(`🚀 Express server running on port ${port}`);
+    const host = process.env.WEB_HOST || '0.0.0.0';
+    app.listen(port, host, () => {
+      console.log(`🚀 Express server running on ${host}:${port}`);
     });
 
     console.log('✅ CVNL Discord Bot, Web Server, and WebSocket Server started successfully!');

@@ -19,7 +19,12 @@ export class WebServer {
   }
 
   private setupMiddleware(): void {
-    this.app.use(cors());
+    this.app.use(cors({
+      origin: '*',
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: false,
+    }));
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
   }

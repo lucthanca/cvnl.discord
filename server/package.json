@@ -11,6 +11,7 @@
     "dev": "tsc --watch & node --watch dist/index.js",
     "dev:build": "tsc && node --watch dist/index.js",
     "dev:env": "node -r dotenv/config dist/index.js",
+    "db": "prisma",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

@@ -302,6 +302,9 @@ export class ChannelService {
     }
     const existingThread = await this.getUserChatThread(chatId, cvnlUserId);
     if (!existingThread) {
+      console.log('Non existing thread', {
+        chatId, cvnlUserId
+      });
       const remoteThread = await this.createDiscordThread(channel, chatId) as ThreadChannelWithNewFlag;
       remoteThread.is_new = true;
       await dbService.saveChatThread({
@@ -437,7 +440,7 @@ export class ChannelService {
       let reply: ReplyOptions | undefined = undefined;
       if (msg.replyId) {
         const threadMessage = await dbService.getResource().threadMessage.findUnique({
-          where: { cvnlMsgId: msg.replyId },
+          where: { threadId_cvnlMsgId: { threadId: threadChannel.id, cvnlMsgId: msg.replyId } },
         });
         if (threadMessage) {
           reply = { messageReference: threadMessage.discordMsgId };

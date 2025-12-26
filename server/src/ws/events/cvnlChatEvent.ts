@@ -19,6 +19,15 @@ type C2EventData = {
     replySelf?: boolean; // Optional flag for self-reply
   }
 };
+type C1Event = {
+  event: 'c1';
+  data: {
+    id: string; // Chat ID
+    gender?: 'male' | 'female' | 'other',
+    createdAt: string;
+    job?: number;
+  }
+};
 const c6: EventHandler = async (client, data: any) => {
   // This event is triggered when the stranger likes the chat
   const chatId = client.activeChatId;
@@ -40,7 +49,7 @@ const c6: EventHandler = async (client, data: any) => {
     }]
   });
 };
-const c1: EventHandler = async (client, data: any) => {
+const c1: EventHandler = async (client, data: C1Event) => {
   try {
     if (client.activeEphemeralMessage) {
       await client.activeEphemeralMessage.delete();
@@ -110,12 +119,12 @@ const c1: EventHandler = async (client, data: any) => {
           },
           {
             name: '🧠 Giới tính',
-            value: `\`${cvnlApiService.getGenderName(data.data.gender)}\``,
+            value: `\`${cvnlApiService.getGenderName(data.data?.gender ?? 'unknown')}\``,
             inline: true,
           },
           {
             name: '💼 Đang là',
-            value: `\`${cvnlApiService.getJobName(data.data.job)}\``,
+            value: `\`${cvnlApiService.getJobName(data.data?.job ?? -1)}\``,
             inline: true,
           }
         ],
@@ -189,7 +198,7 @@ const c2: EventHandler = async (client, data: C2EventData) => {
     if (messageData.replyId) {
       const threadMessage = await dbService.getResource().threadMessage.findUnique({
         where: {
-          cvnlMsgId: messageData.replyId
+          threadId_cvnlMsgId: { threadId: client.activeThread.id, cvnlMsgId: messageData.replyId }
         },
       });
       if (threadMessage) {
@@ -393,7 +402,9 @@ const c20: EventHandler = async (client, data) => {
     return;
   }
   try {
-    const msg = await dbService.getResource().threadMessage.findUnique({ where: { cvnlMsgId: messageId } });
+    const msg = await dbService.getResource().threadMessage.findUnique({ where: {
+      threadId_cvnlMsgId: { threadId: activeThread.id, cvnlMsgId: messageId }
+    } });
     if (!msg) return;
     let discordMsg = activeThread.messages.cache.get(msg.discordMsgId);
     if (!discordMsg) {

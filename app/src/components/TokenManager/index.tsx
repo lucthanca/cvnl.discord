@@ -1,5 +1,6 @@
 import React from "react";
 import Textbox from "../Textbox";
+import { SERVER_URL } from "@src/constants";
 import {
   authenticateWithDiscord,
   DiscordUser,
@@ -51,7 +52,7 @@ const TokenManager: React.FC = () => {
   const loadSavedTokens = async (discordUserId: string) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/discord/tokens/${discordUserId}`
+        `${SERVER_URL}/api/discord/tokens/${discordUserId}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -71,7 +72,7 @@ const TokenManager: React.FC = () => {
     token: string
   ): Promise<{ success: boolean; tokenData?: any; error?: string }> => {
     try {
-      const response = await fetch("http://localhost:3000/api/discord/tokens", {
+      const response = await fetch(`${SERVER_URL}/api/discord/tokens`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -100,7 +101,7 @@ const TokenManager: React.FC = () => {
   ): Promise<boolean> => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/discord/tokens/${discordUserId}/${cvnlUserId}`,
+        `${SERVER_URL}/api/discord/tokens/${discordUserId}/${cvnlUserId}`,
         {
           method: "DELETE",
         }

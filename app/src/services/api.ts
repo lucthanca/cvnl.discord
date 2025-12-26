@@ -1,4 +1,4 @@
-const SERVER_URL = 'http://localhost:3000';
+import { SERVER_URL } from "@src/constants";
 
 export interface DiscordUser {
   id: string;

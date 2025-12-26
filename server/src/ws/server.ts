@@ -15,7 +15,8 @@ const io = new SocketIOServer(httpServer, {
 io.on('connection', onConnection);
 
 const port = parseInt(process.env.WS_PORT || '3001');
-httpServer.listen(port, () => {
-  console.log(`🚀 WebSocket server running on port ${port} with EIO3 support`);
+const host = process.env.WS_HOST || '0.0.0.0';
+httpServer.listen(port, host, () => {
+  console.log(`🚀 WebSocket server running on ${host}:${port} with EIO3 support`);
 });
 export default io;

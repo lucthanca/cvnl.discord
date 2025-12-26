@@ -72,9 +72,10 @@ model ChatThread {
 model ThreadMessage {
     threadId     String
     discordMsgId String     @unique
-    cvnlMsgId    String     @unique
+    cvnlMsgId    String
     thread       ChatThread @relation(fields: [threadId], references: [threadId])
 
+    @@unique([threadId, cvnlMsgId])
     @@id([discordMsgId, cvnlMsgId])
     @@map("thread_messages")
 }

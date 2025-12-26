@@ -183,7 +183,7 @@ const TokenManager: React.FC = () => {
       if (error instanceof TypeError && error.message.includes("fetch")) {
         alert("🌐 Không thể kết nối đến server\n\nVui lòng kiểm tra:\n- Server có đang chạy?\n- Cổng 3000 có bị block?");
       } else {
-        alert("💥 Có lỗi không xác định xảy ra\n\nChi tiết lỗi: " + error.message);
+        alert("💥 Có lỗi không xác định xảy ra\n\nChi tiết lỗi: " + (error instanceof Error ? error.message : String(error)));
       }
     } finally {
       setIsLoading(false);
@@ -439,8 +439,10 @@ const TokenManager: React.FC = () => {
               <h4>Thêm Token Mới</h4>
               <div style={{ marginBottom: "10px", width: "100%" }}>
                 <Textbox
+                  title="CVNL Token"
+                  name="cvnlToken"
                   value={newToken}
-                  onChange={setNewToken}
+                  onChange={(value: string) => setNewToken(value)}
                   placeholder="Nhập CVNL token của bạn..."
                   style={{
                     width: "100%",
